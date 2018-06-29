@@ -39,7 +39,7 @@ const request = require('request');
 const express = require('express');
 const webClient = express();
 const OAuth1Client = require("oauth-1-client");
-fs.readFile('./package.json', 'utf-8', (response) => {
+fs.readFile('../../package.json', 'utf-8', (response) => {
   console.log(response)
 })
 var discordClient = new Discord.Client();
@@ -84,7 +84,8 @@ var dError = (message, messageContent) => {
 };
 var handleShutdown = () => {
   discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
-  discordClient.destroy();
+  discordClient.destroy()
+    .then(a=>{process.exit()});
 }
 // Commands
 var commands = {
