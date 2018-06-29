@@ -35,56 +35,14 @@ Ideas:
 Send user a message on KA when they are banned from a server with the bot if they no longer share a server with it?
 */
 
-// String diff (John Resig's work: https://johnresig.com/files/jsdiff.js)
-function diff( o, n ) {
-  var ns = new Object();
-  var os = new Object();
-
-  for ( var i = 0; i < n.length; i++ ) {
-    if ( ns[ n[i] ] == null )
-      ns[ n[i] ] = { rows: new Array(), o: null };
-    ns[ n[i] ].rows.push( i );
-  }
-
-  for ( var i = 0; i < o.length; i++ ) {
-    if ( os[ o[i] ] == null )
-      os[ o[i] ] = { rows: new Array(), n: null };
-    os[ o[i] ].rows.push( i );
-  }
-
-  for ( var i in ns ) {
-    if ( ns[i].rows.length == 1 && typeof(os[i]) != "undefined" && os[i].rows.length == 1 ) {
-      n[ ns[i].rows[0] ] = { text: n[ ns[i].rows[0] ], row: os[i].rows[0] };
-      o[ os[i].rows[0] ] = { text: o[ os[i].rows[0] ], row: ns[i].rows[0] };
-    }
-  }
-
-  for ( var i = 0; i < n.length - 1; i++ ) {
-    if ( n[i].text != null && n[i+1].text == null && n[i].row + 1 < o.length && o[ n[i].row + 1 ].text == null &&
-         n[i+1] == o[ n[i].row + 1 ] ) {
-      n[i+1] = { text: n[i+1], row: n[i].row + 1 };
-      o[n[i].row+1] = { text: o[n[i].row+1], row: i + 1 };
-    }
-  }
-
-  for ( var i = n.length - 1; i > 0; i-- ) {
-    if ( n[i].text != null && n[i-1].text == null && n[i].row > 0 && o[ n[i].row - 1 ].text == null &&
-         n[i-1] == o[ n[i].row - 1 ] ) {
-      n[i-1] = { text: n[i-1], row: n[i].row - 1 };
-      o[n[i].row-1] = { text: o[n[i].row-1], row: i - 1 };
-    }
-  }
-
-  return { o: o, n: n };
-}
-
 // Requirements and instantiation
 const Discord = require('discord.js'),
       fs = require('fs'),
       request = require('request'),
       express = require('express'),
       webClient = express(),
-      OAuth1Client = require("oauth-1-client");
+      OAuth1Client = require("oauth-1-client"),
+      levenshtein = require('js-levenshtein');
 
 // Load version
 var version = '0.0';
@@ -186,8 +144,7 @@ var commands = {
         console.log(userID);
         var associatedDiff = {};
         for(var [key, value] of discordClient.users){
-          associatedDiff[key] = diff(value.username, userID);
-          console.log(associatedDiff[key])
+          associatedDiff[key] = levenshtein(userID, value.username);
         }
         console.log(associatedDiff)
       }
