@@ -1,7 +1,7 @@
 {
   "name": "Ultimate-KA-Bot",
   "description": "A bot that uses an oauth grant to securely log people in and connect Khan Academy to Discord in an immersive way.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "dependencies": {
     "discord.js": "latest",
     "fs": "latest",

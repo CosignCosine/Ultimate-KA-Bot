@@ -39,8 +39,10 @@ const request = require('request');
 const express = require('express');
 const webClient = express();
 const OAuth1Client = require("oauth-1-client");
+var version = '0.0';
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
-  console.log(response)
+  var data = JSON.parse(response);
+  version = data.version;
 })
 var discordClient = new Discord.Client();
 
@@ -191,7 +193,7 @@ webClient.listen(port, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
-  discordClient.user.setPresence({ game: { name: 'version' }, status: 'idle' })
+  discordClient.user.setPresence({ game: { name: 'version' + version }, status: 'idle' })
 });
 
 discordClient.on('message', (message) => {
