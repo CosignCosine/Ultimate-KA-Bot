@@ -166,9 +166,9 @@ var commands = {
         associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
         userID = associatedDiff[0][0];
       }
-      //if(!users[userID]){
-        //dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `u&ka&login`.')
-      //}else{
+      if(!users[userID]){
+        dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `u&ka&login`.')
+      }else{
         var userDist = discordClient.users.get(userID);
         if(userDist && +userID !== 1){
           var ee = new Discord.RichEmbed();
@@ -177,7 +177,7 @@ var commands = {
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         }
-      //}
+      }
     }
   }
 }
