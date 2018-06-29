@@ -35,75 +35,48 @@ Ideas:
 Send user a message on KA when they are banned from a server with the bot if they no longer share a server with it?
 */
 
-// String prototype extensions (Stolen from https://codereview.stackexchange.com/questions/133586/a-string-prototype-diff-implementation-text-diff)
-Array.prototype.rotate = function(n){
-	var len = this.length,
-	    res = new Array(this.length);
-	if (n % len === 0) return this.slice();
-	else for (var i = 0; i < len; i++) res[i] = this[(i + (len + n % len)) % len];
-	return res;
-};
+// String diff (John Resig's work: https://johnresig.com/files/jsdiff.js)
+function diff( o, n ) {
+  var ns = new Object();
+  var os = new Object();
 
-String.prototype.diff = function(s,p){       // p -> precision factor
-
-  function getMatchingSubstring(s,l,m){      // returns the first matching substring in-between the two strings
-    var i = 0,
-     slen = s.length,
-    match = false,
-        o = {fis:slen, mtc:m, sbs:""};       // temporary object used to construct the cd (change data) object
-    while (i < slen ) {
-      l[i] === s[i] ? match ? o.sbs += s[i]  // o.sbs holds the matching substring itsef
-    	                    : (match = true, o.fis = i, o.sbs = s[i])
-    	            : match && (i = slen);   // stop after the first found substring
-      ++i;
-    }
-    return o;
+  for ( var i = 0; i < n.length; i++ ) {
+    if ( ns[ n[i] ] == null )
+      ns[ n[i] ] = { rows: new Array(), o: null };
+    ns[ n[i] ].rows.push( i );
   }
 
-  function getChanges(t,s,m){
-    var isThisLonger = t.length >= s.length ? true : false,
-    [longer,shorter] = isThisLonger ? [t,s] : [s,t], // assignment of longer and shorter by es6 destructuring
-                  bi = 0;  // base index designating the index of first mismacthing character in both strings
-
-    while (shorter[bi] === longer[bi] && bi < shorter.length) ++bi; // make bi the index of first mismatching character
-    longer = longer.split("").slice(bi);   // as the longer string will be rotated it is converted into array
-    shorter = shorter.slice(bi);           // shorter and longer now starts from the first mismatching character
-
-    var  len = longer.length,              // length of the longer string
-          cd = {fis: shorter.length,       // the index of matching string in the shorter string
-                fil: len,                  // the index of matching string in the longer string
-                sbs: "",                   // the matching substring itself
-                mtc: m + s.slice(0,bi)},   // if exists mtc holds the matching string at the front
-         sub = {sbs:""};                   // returned substring per 1 character rotation of the longer string
-
-    if (shorter !== "") {
-      for (var rc = 0; rc < len && sub.sbs.length < p; rc++){           // rc -> rotate count, p -> precision factor
-        sub = getMatchingSubstring(shorter, longer.rotate(rc), cd.mtc); // rotate longer string 1 char and get substring
-        sub.fil = rc < len - sub.fis ? sub.fis + rc                     // mismatch is longer than the mismatch in short
-                                     : sub.fis - len + rc;              // mismatch is shorter than the mismatch in short
-        sub.sbs.length > cd.sbs.length && (cd = sub);                   // only keep the one with the longest substring.
-      }
-    }
-    // insert the mismatching delete subsrt and insert substr to the cd object and attach the previous substring
-    [cd.del, cd.ins] = isThisLonger ? [longer.slice(0,cd.fil).join(""), shorter.slice(0,cd.fis)]
-                                    : [shorter.slice(0,cd.fis), longer.slice(0,cd.fil).join("")];
-    return cd.del.indexOf(" ") == -1 ||
-           cd.ins.indexOf(" ") == -1 ||
-           cd.del === ""             ||
-           cd.ins === ""             ||
-           cd.sbs === ""              ? cd : getChanges(cd.del, cd.ins, cd.mtc);
+  for ( var i = 0; i < o.length; i++ ) {
+    if ( os[ o[i] ] == null )
+      os[ o[i] ] = { rows: new Array(), n: null };
+    os[ o[i] ].rows.push( i );
   }
 
-  var changeData = getChanges(this,s,""),
-           nextS = s.slice(changeData.mtc.length + changeData.ins.length + changeData.sbs.length),    // remaining part of "s"
-        nextThis = this.slice(changeData.mtc.length + changeData.del.length + changeData.sbs.length), // remaining part of "this"
-          result = "";  // the glorious result
-  changeData.del.length > 0 && (changeData.del = '<span class = "deleted">'  + changeData.del + '</span>');
-  changeData.ins.length > 0 && (changeData.ins = '<span class = "inserted">' + changeData.ins + '</span>');
-  result = changeData.mtc + changeData.del + changeData.ins + changeData.sbs;
-  result += (nextThis !== "" || nextS !== "") ? nextThis.diff(nextS,p) : "";
-  return result;
-};
+  for ( var i in ns ) {
+    if ( ns[i].rows.length == 1 && typeof(os[i]) != "undefined" && os[i].rows.length == 1 ) {
+      n[ ns[i].rows[0] ] = { text: n[ ns[i].rows[0] ], row: os[i].rows[0] };
+      o[ os[i].rows[0] ] = { text: o[ os[i].rows[0] ], row: ns[i].rows[0] };
+    }
+  }
+
+  for ( var i = 0; i < n.length - 1; i++ ) {
+    if ( n[i].text != null && n[i+1].text == null && n[i].row + 1 < o.length && o[ n[i].row + 1 ].text == null &&
+         n[i+1] == o[ n[i].row + 1 ] ) {
+      n[i+1] = { text: n[i+1], row: n[i].row + 1 };
+      o[n[i].row+1] = { text: o[n[i].row+1], row: i + 1 };
+    }
+  }
+
+  for ( var i = n.length - 1; i > 0; i-- ) {
+    if ( n[i].text != null && n[i-1].text == null && n[i].row > 0 && o[ n[i].row - 1 ].text == null &&
+         n[i-1] == o[ n[i].row - 1 ] ) {
+      n[i-1] = { text: n[i-1], row: n[i].row - 1 };
+      o[n[i].row-1] = { text: o[n[i].row-1], row: i - 1 };
+    }
+  }
+
+  return { o: o, n: n };
+}
 
 // Requirements and instantiation
 const Discord = require('discord.js'),
@@ -213,7 +186,7 @@ var commands = {
         console.log(userID);
         var associatedDiff = {};
         for(var [key, value] of discordClient.users){
-          associatedDiff[key] = value.username.diff(userID)
+          associatedDiff[key] = diff(value.username, userID);
           console.log(associatedDiff[key])
         }
         console.log(associatedDiff)
