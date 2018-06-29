@@ -19,7 +19,6 @@ const DEBUG = false,
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
-- ka&login/ka&link
 - ka&me/ka&profile
 - ka&unlink/ka&logout
 - ka&whois/ka&who (e.g. u&ka&whois @Scott#4276 on ka [returns @ct20024], u&ka&whois ct200224 on discord [returns @Scott#4276])
@@ -57,7 +56,6 @@ var { TOKEN, SECRET, KEY, DATABASE_URL } = process.env;
 var markedForReLogin = [];
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
-  console.log(dbTokens)
   TOKEN = dbTokens.token;
   SECRET = dbTokens.secret;
   KEY = dbTokens.key;
@@ -108,14 +106,17 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         .then(m=>{
           discordClient.destroy()
             .then(()=>{
-              console.log('destroyed discord client')
+              console.log('[UKB] Destroyed Discord client, killed process with exit type 0.')
               clearInterval(interval);
               process.exit()
             }).catch(e => {
               console.log(e);
             })
         })
-    };
+    },
+    query = (id, callback) => {
+      pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', callback);
+    }
 
 // PostgreSQL client
 const pgSQLClient = new Client(DEBUG ? {
@@ -128,7 +129,7 @@ const pgSQLClient = new Client(DEBUG ? {
 } : {connectionString: DATABASE_URL});
 pgSQLClient.connect()
   .then(()=>{
-    console.log('[UKB] SQL connection acquired.')
+    console.log('[UKB] PostgreSQLdb connection acquired.')
   })
   .catch((e)=>{
     console.log(e.stack)
@@ -163,21 +164,28 @@ var commands = {
     },
     documentation: 'This commands allows the user to login to their KA account.'
   },
+  link: this.login,
   banned: {
     run(message, arg){
-      if(!users[message.author.id]){
-        dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
-      }else{
-        confirmation(message);
-        var ee = new Discord.RichEmbed();
-        ee.setTitle('Discussion Ban')
-        ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
-        ee.setColor(COLORS.COMPLETE);
-        message.author.send({embed: ee})
-          .catch(e => {
-            dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
-          })
-      }
+      query(message.author.id, (err, res) => {
+        if(err || res.rows.length !== 1){
+          dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
+          return;
+        }
+        client.auth(res.rows[0].token, res.rows[0].secret)
+          .get("/api/v1/user", { casing: "camel" })
+          .then(response => {
+            confirmation(message);
+            var ee = new Discord.RichEmbed();
+            ee.setTitle('Discussion Ban')
+            ee.setDescription(`You have ${response.body.discussionBanned ? '' : 'not '}been discussion banned.`);
+            ee.setColor(COLORS.COMPLETE);
+            message.author.send({embed: ee})
+              .catch(e => {
+                dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can DM you?');
+              })
+        })
+      })
     },
     documentation: 'This commands allows the user to check if their KA account is discussion banned. `Note: This information is private and will be sent to DMs only. If you choose to make it public that is up to you.`'
   },
@@ -196,22 +204,32 @@ var commands = {
         associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
         userID = associatedDiff[0][0];
       }
-      pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + userID + '\';', (err, res) => {
-        console.log(err, res, userID)
-        if(err || res.rows.length !== 1){
-          dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`.');
-          return;
-        }
-        var data = res.rows[0];
-        var userDist = discordClient.users.get(userID);
-        if(userDist && +userID !== 1){
+      var userDist = discordClient.users.get(userID);
+      if(userDist && +userID !== 1){
+        pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + userID + '\';', (err, res) => {
+          if(err || res.rows.length !== 1){
+            var potentialErrors = [
+              "Perhaps they need a little, uh, motivation?",
+              "Wow, they must just like being incognito.",
+              "Ok, that is epic.",
+              "Do you realize the scope of this situation and the implications it has on the society in which we live?",
+              "What if they wanted to look up their own stats?",
+              "Blaze does not approve of this message",
+              "Does this text block help me to pass the Turing Test?",
+              "We live in a society... that is ruined through this sort of thing. Dead meme, I know."
+            ]
+            dError(message, 'It looks like **' + userDist.username + '** hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`. *' + potentialErrors[Math.floor(Math.random()*potentialErrors.length)] + '*');
+            return;
+          }
+          var data = res.rows[0];
           var ee = new Discord.RichEmbed();
-          ee.setTitle(userDist.username, userDist.avatarURL)
-          ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*`);
+          ee.setAuthor(userDist.username, userDist.avatarURL)
+          ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${data.username})`);
+          ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
-        }
-      })
+        })
+      }
     }
   }
 }
@@ -260,24 +278,12 @@ webClient.get('/', function (req, res) {
             rem.setFooter('You\'re all set up!');
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
-            users[i].streakStartedAt = response.body.startConsecutiveActivityDate;
-            users[i].username = response.body.username;
-            users[i].points = response.body.points;
-            users[i].firstVisit = response.body.firstVisit;
-            users[i].joined = response.body.joined;
-            users[i].nickname = response.body.studentSummary.nickname;
-            users[i].lastUpdate = new Date();
-            // kaid
-            // badgeCounts
-            // discussionBanned
-            // opt-in email?
             pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', (err, res) => {
-              console.log(id, res)
               if(err || res.rows.length !== 1){
-                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
+                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
                   .then(resd => {
-                    console.log('query complete', resd.rows[0])
-                    // { name: 'brianc', email: 'brian.m.carlson@gmail.com' }
+                    console.log('[UKB] Data uploaded!');
+                    delete users[i];
                   })
                   .catch(e => console.error(e.stack))
               }
