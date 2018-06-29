@@ -42,7 +42,8 @@ const Discord = require('discord.js'),
       express = require('express'),
       webClient = express(),
       OAuth1Client = require("oauth-1-client"),
-      levenshtein = require('js-levenshtein');
+      levenshtein = require('js-levenshtein'),
+      { Client } = require('pg');
 
 // Load version and debug tokens
 var version = '0.0', interval;
@@ -107,6 +108,9 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         })
     };
 
+// PostgreSQL client
+const pgSQLClient = new Client({connectionString: process.env.DATABASE_URL});
+
 // Commands
 var commands = {
   login: {
@@ -135,7 +139,7 @@ var commands = {
   banned: {
     run(message, arg){
       if(!users[message.author.id]){
-        dError(message, 'It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
+        dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
       }else{
         confirmation(message);
         var ee = new Discord.RichEmbed();
@@ -166,7 +170,7 @@ var commands = {
         userID = associatedDiff[0][0];
       }
       if(!users[userID]){
-        dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `u&ka&login`.')
+        dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`.')
       }else{
         var userDist = discordClient.users.get(userID);
         if(userDist && +userID !== 1){
@@ -211,7 +215,7 @@ webClient.get('/', function (req, res) {
       console.log('[UKB] Illegal/Malformed Request to webserver');
       return;
     }
-    
+
     client.accessToken(query.oauth_token, query.oauth_token_secret, query.oauth_verifier)
       .then(tokens => {
         var { token, tokenSecret } = tokens;
@@ -220,14 +224,13 @@ webClient.get('/', function (req, res) {
         client.auth(token, tokenSecret)
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
-            console.log('hi')
+            console.log(response.body)
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
             var rem = new Discord.RichEmbed();
             rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
             rem.setFooter('You\'re all set up!');
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
-            users[i].info = response.body;
             users[i].streakStartedAt = response.body.startConsecutiveActivityDate;
             users[i].username = response.body.username;
             users[i].points = response.body.points;
@@ -239,6 +242,12 @@ webClient.get('/', function (req, res) {
             // badgeCounts
             // discussionBanned
             // opt-in email?
+            pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
+              .then(res => {
+                console.log(res.rows[0])
+                // { name: 'brianc', email: 'brian.m.carlson@gmail.com' }
+              })
+              .catch(e => console.error(e.stack))
           })
       })
   }
