@@ -181,7 +181,7 @@ discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
     var command = message.content.replace(PREFIX, '').split(' ')[0];
     if(commands[command]){
-      commands[command].run();
+      commands[command].run(message);
     }else{
       message.channel.send('no')
     }
