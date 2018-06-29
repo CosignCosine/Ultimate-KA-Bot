@@ -211,13 +211,16 @@ webClient.get('/', function (req, res) {
       console.log('[UKB] Illegal/Malformed Request to webserver');
       return;
     }
+    
     client.accessToken(query.oauth_token, query.oauth_token_secret, query.oauth_verifier)
       .then(tokens => {
         var { token, tokenSecret } = tokens;
         users[id].request_token_secret = tokenSecret;
+        console.log('hi2')
         client.auth(token, tokenSecret)
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
+            console.log('hi')
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
             var rem = new Discord.RichEmbed();
             rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
@@ -232,6 +235,10 @@ webClient.get('/', function (req, res) {
             users[i].joined = response.body.joined;
             users[i].nickname = response.body.studentSummary.nickname;
             users[i].lastUpdate = new Date();
+            // kaid
+            // badgeCounts
+            // discussionBanned
+            // opt-in email?
           })
       })
   }
