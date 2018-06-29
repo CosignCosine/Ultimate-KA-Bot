@@ -1,8 +1,4 @@
 const DEBUG = 0;
-const CONFIG = {
-  SERVER_DATA_CHANNEL: 460853247977062401,
-  USER_DATA_CHANNEL: 460853259448352778
-};
 /**
 Commands left to implement:
 - ka&getNotifs
@@ -31,8 +27,6 @@ const webClient = express();
 const OAuth1Client = require("oauth-1-client");
 var discordClient = new Discord.Client();
 
-
-
 var port = process.env.PORT || 8080;
 
 // Discord Token loading
@@ -56,17 +50,6 @@ const client = new OAuth1Client({
 
 
 var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {});
-var backupJSONToDiscord = () => {
-  fs.writeFile('./users.json', JSON.stringify(users), function(err){
-    if(!err){
-      console.log('[UKB] File backed up successfully! Uploading to backup channel...');
-      discordClient.channels.get("460853259448352778").send({files: [{
-        attachment: './users.json',
-        name: 'users.json'
-      }]})
-    }
-  })
-};
 
 // Commands
 var commands = {
@@ -139,7 +122,7 @@ webClient.get('/', function (req, res) {
               discordClient.users.get(id).send({embed: rem})
               users[i].info = response.body;
               users[i].lastUpdate = new Date();
-              backupJSONToDiscord();
+              console.log(users[i].info, i)
             })
     })
   }
