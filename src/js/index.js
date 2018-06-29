@@ -195,6 +195,7 @@ var commands = {
         pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
           var data = res.rows[0];
           var ee = new Discord.RichEmbed();
+          console.log(res.rows[0]);
           var userDist = discordClient.users.get(data.id)
           ee.setAuthor(userDist.username, userDist.avatarURL)
           ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
@@ -292,6 +293,7 @@ webClient.get('/', function (req, res) {
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
             query(id, (err, res) => {
+              console.log(res.rows);
               if(err || res.rows.length !== 1){
                 pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
                   .then(resd => {
