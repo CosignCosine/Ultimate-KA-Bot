@@ -39,7 +39,7 @@ const request = require('request');
 const express = require('express');
 const webClient = express();
 const OAuth1Client = require("oauth-1-client");
-fs.readFile('../../package.json', 'utf-8', (response) => {
+fs.readFile(__dirname + '/../../package.json', 'utf-8', (response) => {
   console.log(response)
 })
 var discordClient = new Discord.Client();
