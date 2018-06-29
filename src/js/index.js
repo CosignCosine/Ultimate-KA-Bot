@@ -62,6 +62,9 @@ var commands = {
         acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
         acceptEmbed.setColor('#BADA55');
         message.channel.send({embed: acceptEmbed})
+          .catch(e => {
+            message.channel.send('Hey ' + message.author + ', I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?')
+          })
         client.requestToken()
           .then(response => {
             users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
@@ -74,9 +77,24 @@ var commands = {
           })
       }
     },
-    eval: {
+    banned: {
       run(message, args){
-        eval(message.content)
+        if(!users[message.author.id]){
+          var ee = new Discord.RichEmbed();
+          ee.setTitle('Error!')
+          ee.setDescription('It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
+          ee.setColor('#FF0000');
+          message.channel.send({embed: ee});
+        }else{
+          var ee = new Discord.RichEmbed();
+          ee.setTitle('Discussion Ban')
+          ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
+          ee.setColor('#BADA55');
+          message.author.send({embed: ee});
+            .catch(e => {
+              message.channel.send('Hey ' + message.author + ', I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can send the information?')
+            })
+        }
       }
     }
   },
