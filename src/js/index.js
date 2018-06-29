@@ -85,7 +85,10 @@ var dError = (message, messageContent) => {
 var handleShutdown = () => {
   discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
   discordClient.destroy()
-    .then(a=>{process.exit()});
+    .then(a=>{
+      console.log('destroyed discord client')
+      process.exit()
+    });
 }
 // Commands
 var commands = {
