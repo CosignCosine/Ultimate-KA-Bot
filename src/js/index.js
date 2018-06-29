@@ -12,7 +12,10 @@ const DEBUG = 0,
         ERROR: '#FF0000'
       },
       RELOAD_CHANNEL = '460219376654876673',
-      PING_USER = '198942810571931649'; // Scott
+      PING_USER = '198942810571931649', // Scott
+      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://0.0.0.0/'][DEBUG],
+      KA = 'www.khanacademy.org',
+      PORT = process.env.PORT || 8080;
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
@@ -33,12 +36,14 @@ Send user a message on KA when they are banned from a server with the bot if the
 */
 
 // Requirements and instantiation
-const Discord = require('discord.js');
-const fs = require('fs');
-const request = require('request');
-const express = require('express');
-const webClient = express();
-const OAuth1Client = require("oauth-1-client");
+const Discord = require('discord.js'),
+      fs = require('fs'),
+      request = require('request'),
+      express = require('express'),
+      webClient = express(),
+      OAuth1Client = require("oauth-1-client");
+
+// Load version
 var version = '0.0';
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   var data = JSON.parse(response);
@@ -46,52 +51,48 @@ fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
 })
 var discordClient = new Discord.Client();
 
-var port = process.env.PORT || 8080;
-
 // Discord Token loading
 discordClient.login(process.env.TOKEN)
 
 // KA Consumer Token loading
-var keys = {key: process.env.KEY, secret: process.env.SECRET};
-var queries = {};
-var callbackURL = ['http://ukb.herokuapp.com/', 'http://0.0.0.0/'][DEBUG];
-const KA = 'www.khanacademy.org'
-var users = {};
-
+var keys = {key: process.env.KEY, secret: process.env.SECRET}, queries = {}, users = {};
 const client = new OAuth1Client({
     key: keys.key,
     secret: keys.secret,
-    callbackURL: callbackURL,
-    requestUrl: `https://${KA}/api/auth2/request_token?oauth_callback=${callbackURL}`,
+    callbackURL: CALLBACK_URL,
+    requestUrl: `https://${KA}/api/auth2/request_token?oauth_callback=${CALLBACK_URL}`,
     accessUrl: `https://${KA}/api/auth2/access_token`,
     apiHostName: KA
 });
 
+// Utility functions
+var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {}),
+    confirmation = message => {
+      var acceptEmbed = new Discord.RichEmbed();
+      acceptEmbed.setTitle('Information');
+      acceptEmbed.setDescription('Data has been sent to your DMs.');
+      acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the data.')
+      acceptEmbed.setColor(COLORS.INFORMATION);
+      message.channel.send({embed: acceptEmbed});
+    },
+    dError = (message, messageContent) => {
+      var ee = new Discord.RichEmbed();
+      ee.setTitle('Error!')
+      ee.setDescription(messageContent);
+      ee.setColor(COLORS.ERROR);
+      message.channel.send({embed: ee});
+    },
+    handleShutdown = () => {
+      discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
+        .then(m=>{
+          discordClient.destroy()
+            .then(a=>{
+              console.log('destroyed discord client')
+              process.exit()
+            });
+        })
+    };
 
-var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {});
-var confirmation = message => {
-  var acceptEmbed = new Discord.RichEmbed();
-  acceptEmbed.setTitle('Information');
-  acceptEmbed.setDescription('Data has been sent to your DMs.');
-  acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the data.')
-  acceptEmbed.setColor(COLORS.INFORMATION);
-  message.channel.send({embed: acceptEmbed});
-};
-var dError = (message, messageContent) => {
-  var ee = new Discord.RichEmbed();
-  ee.setTitle('Error!')
-  ee.setDescription(messageContent);
-  ee.setColor(COLORS.ERROR);
-  message.channel.send({embed: ee});
-};
-var handleShutdown = () => {
-  discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
-  discordClient.destroy()
-    .then(a=>{
-      console.log('destroyed discord client')
-      process.exit()
-    });
-}
 // Commands
 var commands = {
   login: {
@@ -194,8 +195,8 @@ webClient.get('/', function (req, res) {
     })
   }
 });
-webClient.listen(port, function () {
-  console.log('[UKB] Web client open on port ' + port + '!')
+webClient.listen(PORT, function () {
+  console.log('[UKB] Web client open on port ' + PORT + '!')
 })
 
 // Discord
@@ -203,7 +204,6 @@ discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
   discordClient.user.setPresence({ game: { name: 'Version ' + version + " | " + PREFIX + "help" }, status: 'idle' })
 });
-
 discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
     var command = message.content.replace(PREFIX, '').split(' ')[0];
