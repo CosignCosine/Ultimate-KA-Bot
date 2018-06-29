@@ -220,11 +220,9 @@ webClient.get('/', function (req, res) {
       .then(tokens => {
         var { token, tokenSecret } = tokens;
         users[id].request_token_secret = tokenSecret;
-        console.log('hi2')
         client.auth(token, tokenSecret)
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
-            console.log(response.body)
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
             var rem = new Discord.RichEmbed();
             rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
