@@ -39,6 +39,9 @@ const request = require('request');
 const express = require('express');
 const webClient = express();
 const OAuth1Client = require("oauth-1-client");
+fs.readFile('./package.json', 'utf-8', (response) => {
+  console.log(response)
+})
 var discordClient = new Discord.Client();
 
 var port = process.env.PORT || 8080;
@@ -81,6 +84,7 @@ var dError = (message, messageContent) => {
 };
 var handleShutdown = () => {
   discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
+  discordClient.destroy();
 }
 // Commands
 var commands = {
@@ -129,8 +133,8 @@ commands.help = {
   run(message, arg){
     var ee = new Discord.RichEmbed();
     ee.setTitle('Commands Help')
-    ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX)}**`);
-    ee.setFooter(`Run \`${PREFIX}help [command]\` to find out more information about each specific command.`)
+    ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX + '**')}**`);
+    ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
     ee.setColor(COLORS.COMPLETE);
     message.author.send({embed: ee})
   }
@@ -185,6 +189,7 @@ webClient.listen(port, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
+  discordClient.user.setPresence({ game: { name: 'version' }, status: 'idle' })
 });
 
 discordClient.on('message', (message) => {
