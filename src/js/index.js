@@ -15,7 +15,7 @@ const DEBUG = false,
       PING_USER = '198942810571931649', // Scott
       CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://localhost/'][DEBUG&1],
       KA = 'www.khanacademy.org',
-      PORT = process.env.PORT || 8080;
+      PORT = process.env.PORT || 80;
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
@@ -172,7 +172,8 @@ var commands = {
         if(userDist && +userID !== 1){
           var ee = new Discord.RichEmbed();
           ee.setTitle(userDist.username, userDist.avatarURL)
-          ee.setDescription(`${userDist.username} is **${users[userID].studentSummary.nickname}** *(@${users[userID].studentSummary.username})*`);
+          console.log(users[userID])
+          ee.setDescription(`${userDist.username} is **${users[userID].nickname}** *(@${users[userID].username})*`);
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         }
@@ -224,6 +225,12 @@ webClient.get('/', function (req, res) {
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
             users[i].info = response.body;
+            users[i].streakStartedAt = response.body.startConsecutiveActivityDate;
+            users[i].username = response.body.username;
+            users[i].points = response.body.points;
+            users[i].firstVisit = response.body.firstVisit;
+            users[i].joined = response.body.joined;
+            users[i].nickname = response.body.studentSummary.nickname;
             users[i].lastUpdate = new Date();
           })
       })
