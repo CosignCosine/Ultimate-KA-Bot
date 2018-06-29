@@ -143,11 +143,12 @@ var commands = {
     run(message, arg){
       var userID = arg.replace(/\!|\@|<|>/gim, '');
       if(isNaN(+userID)){
-        console.log(userID);
-        var associatedDiff = {};
+        var associatedDiff = [];
         for(var [key, value] of discordClient.users){
-          associatedDiff[key] = levenshtein(userID, value.username);
+          associatedDiff.push(key, levenshtein(userID, value.username));
+          associatedDiff.push(key, levenshtein(userID, message.guild.users.get(value.id).nickname))
         }
+        associatedDiff = associatedDiff.sort();
         console.log(associatedDiff)
       }
       message.channel.send(arg)
