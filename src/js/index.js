@@ -36,43 +36,73 @@ Send user a message on KA when they are banned from a server with the bot if the
 */
 
 // String prototype extensions (Stolen from https://codereview.stackexchange.com/questions/133586/a-string-prototype-diff-implementation-text-diff)
-String.prototype.largestMatch = function largestMatch( otherString ){
-
-  if( otherString.length < this.length )
-    return otherString.largestMatch( this );
-
-  var matchingLength = otherString.length,
-      possibleMatch, index;
-
-  while( matchingLength ){
-    index = 0;
-    while( index + matchingLength <= otherString.length ){
-      possibleMatch = otherString.substr( index, matchingLength );
-      if( ~this.indexOf( possibleMatch ) )
-        return otherString.substr( index, matchingLength );
-      index++;
-    }
-    matchingLength--;
-  }
-  return '';
+Array.prototype.rotate = function(n){
+	var len = this.length,
+	    res = new Array(this.length);
+	if (n % len === 0) return this.slice();
+	else for (var i = 0; i < len; i++) res[i] = this[(i + (len + n % len)) % len];
+	return res;
 };
 
-String.prototype.diff = function( newValue ){
+String.prototype.diff = function(s,p){       // p -> precision factor
 
-  var largestMatch = this.largestMatch( newValue ),
-      preNew, postNew, preOld, postOld;
-
-  if(!largestMatch){
-    return [this, newValue];
-  } else {
-    preNew = newValue.substr(0, newValue.indexOf( largestMatch ) );
-    preOld = this.substr(0, this.indexOf( largestMatch ) );
-    postNew = newValue.substr( preNew.length + largestMatch.length );
-    postOld = this.substr( preOld.length + largestMatch.length );
-    console.log( { old: this.toString(), new : newValue , preOld: preOld, match: largestMatch, postOld: postOld,
-                  preNew: preNew, match2: largestMatch, postNew: postNew} );
-    return preOld.diff( preNew ) + largestMatch + postOld.diff( postNew );
+  function getMatchingSubstring(s,l,m){      // returns the first matching substring in-between the two strings
+    var i = 0,
+     slen = s.length,
+    match = false,
+        o = {fis:slen, mtc:m, sbs:""};       // temporary object used to construct the cd (change data) object
+    while (i < slen ) {
+      l[i] === s[i] ? match ? o.sbs += s[i]  // o.sbs holds the matching substring itsef
+    	                    : (match = true, o.fis = i, o.sbs = s[i])
+    	            : match && (i = slen);   // stop after the first found substring
+      ++i;
+    }
+    return o;
   }
+
+  function getChanges(t,s,m){
+    var isThisLonger = t.length >= s.length ? true : false,
+    [longer,shorter] = isThisLonger ? [t,s] : [s,t], // assignment of longer and shorter by es6 destructuring
+                  bi = 0;  // base index designating the index of first mismacthing character in both strings
+
+    while (shorter[bi] === longer[bi] && bi < shorter.length) ++bi; // make bi the index of first mismatching character
+    longer = longer.split("").slice(bi);   // as the longer string will be rotated it is converted into array
+    shorter = shorter.slice(bi);           // shorter and longer now starts from the first mismatching character
+
+    var  len = longer.length,              // length of the longer string
+          cd = {fis: shorter.length,       // the index of matching string in the shorter string
+                fil: len,                  // the index of matching string in the longer string
+                sbs: "",                   // the matching substring itself
+                mtc: m + s.slice(0,bi)},   // if exists mtc holds the matching string at the front
+         sub = {sbs:""};                   // returned substring per 1 character rotation of the longer string
+
+    if (shorter !== "") {
+      for (var rc = 0; rc < len && sub.sbs.length < p; rc++){           // rc -> rotate count, p -> precision factor
+        sub = getMatchingSubstring(shorter, longer.rotate(rc), cd.mtc); // rotate longer string 1 char and get substring
+        sub.fil = rc < len - sub.fis ? sub.fis + rc                     // mismatch is longer than the mismatch in short
+                                     : sub.fis - len + rc;              // mismatch is shorter than the mismatch in short
+        sub.sbs.length > cd.sbs.length && (cd = sub);                   // only keep the one with the longest substring.
+      }
+    }
+    // insert the mismatching delete subsrt and insert substr to the cd object and attach the previous substring
+    [cd.del, cd.ins] = isThisLonger ? [longer.slice(0,cd.fil).join(""), shorter.slice(0,cd.fis)]
+                                    : [shorter.slice(0,cd.fis), longer.slice(0,cd.fil).join("")];
+    return cd.del.indexOf(" ") == -1 ||
+           cd.ins.indexOf(" ") == -1 ||
+           cd.del === ""             ||
+           cd.ins === ""             ||
+           cd.sbs === ""              ? cd : getChanges(cd.del, cd.ins, cd.mtc);
+  }
+
+  var changeData = getChanges(this,s,""),
+           nextS = s.slice(changeData.mtc.length + changeData.ins.length + changeData.sbs.length),    // remaining part of "s"
+        nextThis = this.slice(changeData.mtc.length + changeData.del.length + changeData.sbs.length), // remaining part of "this"
+          result = "";  // the glorious result
+  changeData.del.length > 0 && (changeData.del = '<span class = "deleted">'  + changeData.del + '</span>');
+  changeData.ins.length > 0 && (changeData.ins = '<span class = "inserted">' + changeData.ins + '</span>');
+  result = changeData.mtc + changeData.del + changeData.ins + changeData.sbs;
+  result += (nextThis !== "" || nextS !== "") ? nextThis.diff(nextS,p) : "";
+  return result;
 };
 
 // Requirements and instantiation
@@ -184,11 +214,11 @@ var commands = {
         var associatedDiff = {};
         for(var [key, value] of discordClient.users){
           associatedDiff[key] = value.username.diff(userID)
+          console.log(associatedDiff[key])
         }
         console.log(associatedDiff)
       }
       message.channel.send(arg)
-      console.log(arg)
     }
   }
 }
