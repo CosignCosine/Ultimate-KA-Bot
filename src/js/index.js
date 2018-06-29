@@ -54,6 +54,7 @@ fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
 var discordClient = new Discord.Client();
 var commandsRun = 0;
 var { TOKEN, SECRET, KEY, DATABASE_URL } = process.env;
+var markedForReLogin = [];
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
   console.log(dbTokens)
@@ -137,24 +138,28 @@ pgSQLClient.connect()
 var commands = {
   login: {
     run(message, arg){
-      var acceptEmbed = new Discord.RichEmbed();
-      acceptEmbed.setTitle('KA Login');
-      acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
-      acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
-      acceptEmbed.setColor(COLORS.INFORMATION);
-      message.channel.send({embed: acceptEmbed})
-      client.requestToken()
-        .then(response => {
-          users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
-          var loginEmbed = new Discord.RichEmbed();
-          loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
-          loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
-          loginEmbed.setColor(COLORS.COMPLETE)
-          message.author.send({embed: loginEmbed})
-            .catch(e => {
-              dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
+      pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + message.author.id + '\';', (err, res) => {
+        if(err || res.rows.length !== 1 || markedForReLogin.contains(message.author.id)){
+          var acceptEmbed = new Discord.RichEmbed();
+          acceptEmbed.setTitle('KA Login');
+          acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
+          acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
+          acceptEmbed.setColor(COLORS.INFORMATION);
+          message.channel.send({embed: acceptEmbed})
+          client.requestToken()
+            .then(response => {
+              users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
+              var loginEmbed = new Discord.RichEmbed();
+              loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
+              loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
+              loginEmbed.setColor(COLORS.COMPLETE)
+              message.author.send({embed: loginEmbed})
+                .catch(e => {
+                  dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
+                })
             })
-        })
+        }
+      })
     },
     documentation: 'This commands allows the user to login to their KA account.'
   },
@@ -193,7 +198,7 @@ var commands = {
       }
       pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + userID + '\';', (err, res) => {
         console.log(err, res, userID)
-        if(err){
+        if(err || res.rows.length !== 1){
           dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`.');
           return;
         }
@@ -268,7 +273,7 @@ webClient.get('/', function (req, res) {
             // opt-in email?
             pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', (err, res) => {
               console.log(id, res)
-              if(err){
+              if(err || res.rows.length !== 1){
                 pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
                   .then(resd => {
                     console.log('query complete', resd.rows[0])
