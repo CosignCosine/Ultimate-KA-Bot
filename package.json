@@ -10,5 +10,8 @@
     "js-levenshtein": "latest",
     "oauth-1-client": "latest",
     "request": "latest"
+  },
+  "devDependencies": {
+    "nodemon": "latest"
   }
 }
