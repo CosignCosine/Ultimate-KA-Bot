@@ -139,7 +139,7 @@ pgSQLClient.connect()
 var commands = {
   login: {
     run(message, arg){
-      query(message.author.id, (err, res) => {
+      queryI(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
           var acceptEmbed = new Discord.RichEmbed();
           acceptEmbed.setTitle('KA Login');
@@ -169,7 +169,7 @@ var commands = {
   link: this.login,
   banned: {
     run(message, arg){
-      query(message.author.id, (err, res) => {
+      queryI(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1){
           dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
           return;
@@ -221,7 +221,7 @@ var commands = {
         }
         var userDist = discordClient.users.get(userID);
         if(userDist && +userID !== 1){
-          query(userID, (err, res) => {
+          queryI(userID, (err, res) => {
             if(err || res.rows.length !== 1){
               var potentialErrors = [
                 "Perhaps they need a little, uh, motivation?",
@@ -294,7 +294,7 @@ webClient.get('/', function (req, res) {
             rem.setFooter('You\'re all set up!');
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
-            query(id, (err, res) => {
+            queryI(id, (err, res) => {
               console.log(err, res.rows);
               if(err || res.rows.length !== 1){
                 pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
