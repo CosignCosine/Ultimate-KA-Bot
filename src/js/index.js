@@ -35,6 +35,46 @@ Ideas:
 Send user a message on KA when they are banned from a server with the bot if they no longer share a server with it?
 */
 
+// String prototype extensions (Stolen from https://codereview.stackexchange.com/questions/133586/a-string-prototype-diff-implementation-text-diff)
+String.prototype.largestMatch = function largestMatch( otherString ){
+
+  if( otherString.length < this.length )
+    return otherString.largestMatch( this );
+
+  var matchingLength = otherString.length,
+      possibleMatch, index;
+
+  while( matchingLength ){
+    index = 0;
+    while( index + matchingLength <= otherString.length ){
+      possibleMatch = otherString.substr( index, matchingLength );
+      if( ~this.indexOf( possibleMatch ) )
+        return otherString.substr( index, matchingLength );
+      index++;
+    }
+    matchingLength--;
+  }
+  return '';
+};
+
+String.prototype.diff = function( newValue ){
+
+  var largestMatch = this.largestMatch( newValue ),
+      preNew, postNew, preOld, postOld;
+
+  if(!largestMatch){
+    return [this, newValue];
+  } else {
+    preNew = newValue.substr(0, newValue.indexOf( largestMatch ) );
+    preOld = this.substr(0, this.indexOf( largestMatch ) );
+    postNew = newValue.substr( preNew.length + largestMatch.length );
+    postOld = this.substr( preOld.length + largestMatch.length );
+    console.log( { old: this.toString(), new : newValue , preOld: preOld, match: largestMatch, postOld: postOld,
+                  preNew: preNew, match2: largestMatch, postNew: postNew} );
+    return preOld.diff( preNew ) + largestMatch + postOld.diff( postNew );
+  }
+};
+
 // Requirements and instantiation
 const Discord = require('discord.js'),
       fs = require('fs'),
@@ -139,12 +179,13 @@ var commands = {
   whois: {
     run(message, arg){
       var userID = arg.replace(/\!|\@|<|>/gim, '');
-      if(!isNaN(userID)){
+      if(isNaN(+userID)){
         console.log(userID);
         var associatedDiff = {};
         for(var [key, value] of discordClient.users){
-          console.log(key, value)
+          associatedDiff[key] = value.username.diff(userID)
         }
+        console.log(associatedDiff)
       }
       message.channel.send(arg)
       console.log(arg)
