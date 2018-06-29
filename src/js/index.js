@@ -1,6 +1,18 @@
-const DEBUG = 0;
+// @TODO major code refactor, move all variable types to each other (const => const, var => var)
+// @TODO code sections, variable renaming
+// @TODO response functions (user sends message on discord, bot responds and waits for user input, etc.) [make recursive?]
+// @TODO emojis for prompts (redo leaf emoji?)
+// @TODO heroku pgsql database?
+
+const DEBUG = 0,
+      PREFIX = 'ka!',
+      COLORS = {
+        INFORMATION: '#8fb6d4',
+        COMPLETE: '#BADA55',
+        ERROR: '#FF0000'
+      };
 /**
-Commands left to implement:
+@TODO Commands left to implement:
 - ka&getNotifs
 - ka&login/ka&link
 - ka&me/ka&profile
@@ -50,11 +62,6 @@ const client = new OAuth1Client({
 
 
 var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {});
-const COLORS = {
-  INFORMATION: '#a8bccb',
-  COMPLETE: '#BADA55',
-  ERROR: '#FF0000'
-}
 var confirmation = message => {
   var acceptEmbed = new Discord.RichEmbed();
   acceptEmbed.setTitle('Information');
@@ -72,50 +79,45 @@ var dError = (message, messageContent) => {
 };
 // Commands
 var commands = {
-  ka: {
-    login: {
-      run(message, args){
-        var acceptEmbed = new Discord.RichEmbed();
-        acceptEmbed.setTitle('KA Login');
-        acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
-        acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
-        acceptEmbed.setColor(COLORS.INFORMATION);
-        message.channel.send({embed: acceptEmbed})
-        client.requestToken()
-          .then(response => {
-            users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
-            console.log(users[message.author.id]);
-            var loginEmbed = new Discord.RichEmbed();
-            loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
-            loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
-            loginEmbed.setColor(COLORS.COMPLETE)
-            message.author.send({embed: loginEmbed})
-              .catch(e => {
-                dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
-              })
-          })
-      }
-    },
-    banned: {
-      run(message, args){
-        if(!users[message.author.id]){
-          dError(message, 'It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
-        }else{
-          confirmation(message);
-          var ee = new Discord.RichEmbed();
-          ee.setTitle('Discussion Ban')
-          ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
-          ee.setColor(COLORS.COMPLETE);
-          message.author.send({embed: ee})
+  login: {
+    run(message, arg){
+      var acceptEmbed = new Discord.RichEmbed();
+      acceptEmbed.setTitle('KA Login');
+      acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
+      acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
+      acceptEmbed.setColor(COLORS.INFORMATION);
+      message.channel.send({embed: acceptEmbed})
+      client.requestToken()
+        .then(response => {
+          users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
+          console.log(users[message.author.id]);
+          var loginEmbed = new Discord.RichEmbed();
+          loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
+          loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
+          loginEmbed.setColor(COLORS.COMPLETE)
+          message.author.send({embed: loginEmbed})
             .catch(e => {
               dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
             })
-        }
-      }
+        })
     }
   },
-  admin: {
-
+  banned: {
+    run(message, arg){
+      if(!users[message.author.id]){
+        dError(message, 'It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
+      }else{
+        confirmation(message);
+        var ee = new Discord.RichEmbed();
+        ee.setTitle('Discussion Ban')
+        ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
+        ee.setColor(COLORS.COMPLETE);
+        message.author.send({embed: ee})
+          .catch(e => {
+            dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
+          })
+      }
+    }
   }
 }
 
@@ -146,18 +148,18 @@ webClient.get('/', function (req, res) {
       var { token, tokenSecret } = tokens;
       users[id].request_token_secret = tokenSecret;
       client.auth(token, tokenSecret)
-            .get("/api/v1/user", { casing: "camel" })
-            .then(response => {
-              if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
-              var rem = new Discord.RichEmbed();
-              rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
-              rem.setFooter('You\'re all set up!');
-              rem.setColor('#BADA55');
-              discordClient.users.get(id).send({embed: rem})
-              users[i].info = response.body;
-              users[i].lastUpdate = new Date();
-              console.log(users[i].info, i)
-            })
+        .get("/api/v1/user", { casing: "camel" })
+        .then(response => {
+          if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
+          var rem = new Discord.RichEmbed();
+          rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
+          rem.setFooter('You\'re all set up!');
+          rem.setColor('#BADA55');
+          discordClient.users.get(id).send({embed: rem})
+          users[i].info = response.body;
+          users[i].lastUpdate = new Date();
+          console.log(users[i].info, i)
+        })
     })
   }
 });
@@ -171,18 +173,12 @@ discordClient.on('ready', () => {
 });
 
 discordClient.on('message', (message) => {
-  if(message.content.startsWith('u&')){
-    var commandFolder = message.content.split('&')[1];
-    if(!commands[commandFolder]){
-      message.channel.send('placeholder for: not a valid command folder! try ' + Object.keys(commands).join(", "))
-      return;
-    }
-    var command = message.content.split('&')[2];
-    if(commands[commandFolder][command]){
-      commands[commandFolder][command].run(message, message.content.split('&')[3])
-    } else {
-      message.channel.send('placeholder for: not a valid command! try ' + Object.keys(commands[commandFolder]).join(", "))
-      return;
+  if(message.content.startsWith(prefix)){
+    var command = message.content.replace(prefix, '').split(' ')[0];
+    if(commands[command]){
+      commands[command].run();
+    }else{
+      message.channel.send('no')
     }
   }
 });
