@@ -10,7 +10,9 @@ const DEBUG = 0,
         INFORMATION: '#8fb6d4',
         COMPLETE: '#BADA55',
         ERROR: '#FF0000'
-      };
+      },
+      RELOAD_CHANNEL: '460219376654876673',
+      PING_USER: '198942810571931649'; // Scott
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
@@ -77,6 +79,9 @@ var dError = (message, messageContent) => {
   ee.setColor(COLORS.ERROR);
   message.channel.send({embed: ee});
 };
+var handleShutdown = () => {
+  discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
+}
 // Commands
 var commands = {
   login: {
@@ -182,3 +187,7 @@ discordClient.on('message', (message) => {
     }
   }
 });
+
+// Process handlers
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
