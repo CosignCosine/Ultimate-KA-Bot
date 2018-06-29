@@ -90,7 +90,7 @@ var commands = {
           ee.setTitle('Discussion Ban')
           ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
           ee.setColor('#BADA55');
-          message.author.send({embed: ee});
+          message.author.send({embed: ee})
             .catch(e => {
               message.channel.send('Hey ' + message.author + ', I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can send the information?')
             })
