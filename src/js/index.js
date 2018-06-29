@@ -140,7 +140,7 @@ var commands = {
   login: {
     run(message, arg){
       query(message.author.id, (err, res) => {
-        if(err || res.rows.length !== 1 || markedForReLogin.contains(message.author.id)){
+        if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
           var acceptEmbed = new Discord.RichEmbed();
           acceptEmbed.setTitle('KA Login');
           acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
@@ -159,6 +159,8 @@ var commands = {
                   dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
                 })
             })
+        }else{
+          dError(message, 'User already exists!')
         }
       })
     },
