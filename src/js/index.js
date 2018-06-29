@@ -193,7 +193,7 @@ webClient.listen(port, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
-  discordClient.user.setPresence({ game: { name: 'version' + version }, status: 'idle' })
+  discordClient.user.setPresence({ game: { name: 'Version ' + version + " | " + PREFIX + "help" }, status: 'idle' })
 });
 
 discordClient.on('message', (message) => {
