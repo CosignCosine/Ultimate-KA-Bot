@@ -11,8 +11,8 @@ const DEBUG = 0,
         COMPLETE: '#BADA55',
         ERROR: '#FF0000'
       },
-      RELOAD_CHANNEL: '460219376654876673',
-      PING_USER: '198942810571931649'; // Scott
+      RELOAD_CHANNEL = '460219376654876673',
+      PING_USER = '198942810571931649'; // Scott
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
