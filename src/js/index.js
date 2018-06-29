@@ -139,7 +139,7 @@ pgSQLClient.connect()
 var commands = {
   login: {
     run(message, arg){
-      pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + message.author.id + '\';', (err, res) => {
+      query(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1 || markedForReLogin.contains(message.author.id)){
           var acceptEmbed = new Discord.RichEmbed();
           acceptEmbed.setTitle('KA Login');
@@ -191,44 +191,57 @@ var commands = {
   },
   whois: {
     run(message, arg){
-      var userID = arg.replace(/\!|\@|<|>/gim, '');
-      if(isNaN(+userID)){
-        var associatedDiff = [];
-        for(var [key, value] of discordClient.users){
-          associatedDiff.push([key, levenshtein(userID, value.username)]);
-          var member = message.guild.members.get(value.id);
-          if(member && member.nickname){
-            associatedDiff.push([key, levenshtein(userID, member.nickname)])
-          }
-        }
-        associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
-        userID = associatedDiff[0][0];
-      }
-      var userDist = discordClient.users.get(userID);
-      if(userDist && +userID !== 1){
-        pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + userID + '\';', (err, res) => {
-          if(err || res.rows.length !== 1){
-            var potentialErrors = [
-              "Perhaps they need a little, uh, motivation?",
-              "Wow, they must just like being incognito.",
-              "Ok, that is epic.",
-              "Do you realize the scope of this situation and the implications it has on the society in which we live?",
-              "What if they wanted to look up their own stats?",
-              "Blaze does not approve of this message",
-              "Does this text block help me to pass the Turing Test?",
-              "We live in a society... that is ruined through this sort of thing. Dead meme, I know."
-            ]
-            dError(message, 'It looks like **' + userDist.username + '** hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`. *' + potentialErrors[Math.floor(Math.random()*potentialErrors.length)] + '*');
-            return;
-          }
+      if(message.content.replace(/\W+/gim, '').match(/ondiscord/gim)){
+        pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
           var data = res.rows[0];
           var ee = new Discord.RichEmbed();
+          var userDist = discordClient.users.get(data.id)
           ee.setAuthor(userDist.username, userDist.avatarURL)
-          ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${data.username})`);
+          ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
           ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         })
+      }else{
+        var userID = arg.replace(/\!|\@|<|>/gim, '');
+        if(isNaN(+userID)){
+          var associatedDiff = [];
+          for(var [key, value] of discordClient.users){
+            associatedDiff.push([key, levenshtein(userID, value.username)]);
+            var member = message.guild.members.get(value.id);
+            if(member && member.nickname){
+              associatedDiff.push([key, levenshtein(userID, member.nickname)])
+            }
+          }
+          associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
+          userID = associatedDiff[0][0];
+        }
+        var userDist = discordClient.users.get(userID);
+        if(userDist && +userID !== 1){
+          query(userID, (err, res) => {
+            if(err || res.rows.length !== 1){
+              var potentialErrors = [
+                "Perhaps they need a little, uh, motivation?",
+                "Wow, they must just like being incognito.",
+                "Ok, that is epic.",
+                "Do you realize the scope of this situation and the implications it has on the society in which we live?",
+                "What if they wanted to look up their own stats?",
+                "Blaze does not approve of this message",
+                "Does this text block help me to pass the Turing Test?",
+                "We live in a society... that is ruined through this sort of thing. Dead meme, I know."
+              ]
+              dError(message, 'It looks like **' + userDist.username + '** hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`. *' + potentialErrors[Math.floor(Math.random()*potentialErrors.length)] + '*');
+              return;
+            }
+            var data = res.rows[0];
+            var ee = new Discord.RichEmbed();
+            ee.setAuthor(userDist.username, userDist.avatarURL)
+            ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${data.username})`);
+            ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+            ee.setColor(COLORS.COMPLETE);
+            message.channel.send({embed: ee})
+          })
+        }
       }
     }
   }
@@ -278,7 +291,7 @@ webClient.get('/', function (req, res) {
             rem.setFooter('You\'re all set up!');
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
-            pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', (err, res) => {
+            query(id, (err, res) => {
               if(err || res.rows.length !== 1){
                 pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
                   .then(resd => {
