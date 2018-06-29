@@ -173,8 +173,8 @@ discordClient.on('ready', () => {
 });
 
 discordClient.on('message', (message) => {
-  if(message.content.startsWith(prefix)){
-    var command = message.content.replace(prefix, '').split(' ')[0];
+  if(message.content.startsWith(PREFIX)){
+    var command = message.content.replace(PREFIX, '').split(' ')[0];
     if(commands[command]){
       commands[command].run();
     }else{
