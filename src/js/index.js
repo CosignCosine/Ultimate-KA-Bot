@@ -129,8 +129,8 @@ commands.help = {
   run(message, arg){
     var ee = new Discord.RichEmbed();
     ee.setTitle('Commands Help')
-    ee.setDescription(`The current commands are: ${prefix}**${Object.keys(commands).join('**, ' + prefix)}**`);
-    ee.setFooter(`Run \`${prefix}help [command]\` to find out more information about each specific command.`)
+    ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX)}**`);
+    ee.setFooter(`Run \`${PREFIX}help [command]\` to find out more information about each specific command.`)
     ee.setColor(COLORS.COMPLETE);
     message.author.send({embed: ee})
   }
