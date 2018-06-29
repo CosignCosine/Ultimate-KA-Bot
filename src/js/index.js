@@ -110,6 +110,10 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
 
 // PostgreSQL client
 const pgSQLClient = new Client({connectionString: process.env.DATABASE_URL});
+pgSQLClient.connect()
+  .then(()=>{
+    console.log('[UKB] SQL connection acquired.')
+  })
 
 // Commands
 var commands = {
@@ -240,9 +244,9 @@ webClient.get('/', function (req, res) {
             // badgeCounts
             // discussionBanned
             // opt-in email?
-            pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
+            pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
               .then(res => {
-                console.log(res.rows[0])
+                console.log('query complete')
                 // { name: 'brianc', email: 'brian.m.carlson@gmail.com' }
               })
               .catch(e => console.error(e.stack))
