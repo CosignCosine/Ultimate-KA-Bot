@@ -157,7 +157,6 @@ var commands = {
         var associatedDiff = [];
         for(var [key, value] of discordClient.users){
           associatedDiff.push([key, levenshtein(userID, value.username)]);
-          console.log(value)
           var member = message.guild.members.get(value.id);
           if(member && member.nickname){
             associatedDiff.push([key, levenshtein(userID, member.nickname)])
@@ -172,8 +171,8 @@ var commands = {
         var userDist = discordClient.users.get(userID);
         if(userDist && +userID !== 1){
           var ee = new Discord.RichEmbed();
-          ee.setTitle(userDist.username, userDist.avatarUrl)
-          ee.setDescription(`hi`);
+          ee.setTitle(userDist.username, userDist.avatarURL)
+          ee.setDescription(`${userDist.username} is **${users[userID].studentSummary.nickname}** *(@${users[userID].studentSummary.username})*`);
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         }
