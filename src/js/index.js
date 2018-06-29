@@ -125,6 +125,16 @@ var commands = {
     }
   }
 }
+commands.help = {
+  run(message, arg){
+    var ee = new Discord.RichEmbed();
+    ee.setTitle('Commands Help')
+    ee.setDescription(`The current commands are: ${prefix}**${Object.keys(commands).join('**, ' + prefix)}**`);
+    ee.setFooter(`Run \`${prefix}help [command]\` to find out more information about each specific command.`)
+    ee.setColor(COLORS.COMPLETE);
+    message.author.send({embed: ee})
+  }
+}
 
 // Web
 webClient.engine('html', require('ejs').renderFile);
