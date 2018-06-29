@@ -13,7 +13,7 @@ const DEBUG = false,
       },
       RELOAD_CHANNEL = '460219376654876673',
       PING_USER = '198942810571931649', // Scott
-      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://0.0.0.0/'][DEBUG&1],
+      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://localhost/'][DEBUG&1],
       KA = 'www.khanacademy.org',
       PORT = process.env.PORT || 8080;
 /**
@@ -44,20 +44,28 @@ const Discord = require('discord.js'),
       OAuth1Client = require("oauth-1-client"),
       levenshtein = require('js-levenshtein');
 
-// Load version
-var version = '0.0';
+// Load version and debug tokens
+var version = '0.0', interval;
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   var data = JSON.parse(response);
   version = data.version;
 })
 var discordClient = new Discord.Client();
 var commandsRun = 0;
+var { TOKEN, SECRET, KEY } = process.env;
+if(DEBUG){
+  var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
+  console.log(dbTokens)
+  TOKEN = dbTokens.token;
+  SECRET = dbTokens.secret;
+  KEY = dbTokens.key;
+}
 
 // Discord Token loading
-discordClient.login(process.env.TOKEN)
+discordClient.login(TOKEN)
 
 // KA Consumer Token loading
-var keys = {key: process.env.KEY, secret: process.env.SECRET}, queries = {}, users = {};
+var keys = {key: KEY, secret: SECRET}, queries = {}, users = {};
 const client = new OAuth1Client({
     key: keys.key,
     secret: keys.secret,
@@ -89,10 +97,13 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
         .then(m=>{
           discordClient.destroy()
-            .then(a=>{
+            .then(()=>{
               console.log('destroyed discord client')
+              clearInterval(interval);
               process.exit()
-            });
+            }).catch(e => {
+              console.log(e);
+            })
         })
     };
 
@@ -145,17 +156,28 @@ var commands = {
       if(isNaN(+userID)){
         var associatedDiff = [];
         for(var [key, value] of discordClient.users){
-          associatedDiff.push(key, levenshtein(userID, value.username));
+          associatedDiff.push([key, levenshtein(userID, value.username)]);
           console.log(value)
           var member = message.guild.members.get(value.id);
-          if(member){
-            associatedDiff.push(key, levenshtein(userID, member.nickname))
+          if(member && member.nickname){
+            associatedDiff.push([key, levenshtein(userID, member.nickname)])
           }
         }
-        associatedDiff = associatedDiff.sort();
-        console.log(associatedDiff)
+        associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
+        userID = associatedDiff[0][0];
       }
-      message.channel.send(arg)
+      //if(!users[userID]){
+        //dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `u&ka&login`.')
+      //}else{
+        var userDist = discordClient.users.get(userID);
+        if(userDist && +userID !== 1){
+          var ee = new Discord.RichEmbed();
+          ee.setTitle(userDist.username, userDist.avatarUrl)
+          ee.setDescription(`hi`);
+          ee.setColor(COLORS.COMPLETE);
+          message.channel.send({embed: ee})
+        }
+      //}
     }
   }
 }
@@ -215,8 +237,8 @@ webClient.listen(PORT, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
-  discordClient.user.setPresence({ game: { name: 'Version ' + version + " | " + PREFIX + "help" }, status: 'idle' })
-  setInterval(function(){
+  discordClient.user.setPresence({ game: { name: DEBUG ? 'Running locally, low functionality' : ('Version ' + version + " | " + PREFIX + "help") }, status: 'idle' })
+  interval = setInterval(function(){
     var acceptEmbed = new Discord.RichEmbed();
     acceptEmbed.setTitle('Statistics');
     acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
