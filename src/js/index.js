@@ -114,7 +114,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
             })
         })
     },
-    query = (id, callback) => {
+    queryI = (id, callback) => {
       pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', callback);
     }
 
