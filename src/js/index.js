@@ -72,7 +72,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
 var confirmation = message => {
   var acceptEmbed = new Discord.RichEmbed();
   acceptEmbed.setTitle('Information');
-  acceptEmbed.setDescription('Information has been sent to your DMs.');
+  acceptEmbed.setDescription('Data has been sent to your DMs.');
   acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the data.')
   acceptEmbed.setColor(COLORS.INFORMATION);
   message.channel.send({embed: acceptEmbed});
@@ -114,7 +114,8 @@ var commands = {
               dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
             })
         })
-    }
+    },
+    documentation: 'This commands allows the user to login to their KA account.'
   },
   banned: {
     run(message, arg){
@@ -131,6 +132,12 @@ var commands = {
             dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
           })
       }
+    },
+    documentation: 'This commands allows the user to check if their KA account is discussion banned. `Note: This information is private and will be sent to DMs only. If you choose to make it public that is up to you.`'
+  },
+  whois: {
+    run(message, arg){
+      message.channel.send(arg)
     }
   }
 }
@@ -199,8 +206,9 @@ discordClient.on('ready', () => {
 discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
     var command = message.content.replace(PREFIX, '').split(' ')[0];
+    var arg = message.content.substr(command.length + PREFIX.length + 1, message.content.length-1)
     if(commands[command]){
-      commands[command].run(message);
+      commands[command].run(message, arg);
     }else{
       message.channel.send('no')
     }
