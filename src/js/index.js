@@ -138,6 +138,7 @@ var commands = {
   whois: {
     run(message, arg){
       message.channel.send(arg)
+      console.log(arg)
     }
   }
 }
