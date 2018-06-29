@@ -146,6 +146,7 @@ var commands = {
         var associatedDiff = [];
         for(var [key, value] of discordClient.users){
           associatedDiff.push(key, levenshtein(userID, value.username));
+          console.log(value)
           associatedDiff.push(key, levenshtein(userID, message.guild.members.get(value.id).nickname))
         }
         associatedDiff = associatedDiff.sort();
@@ -185,26 +186,23 @@ webClient.get('/', function (req, res) {
       console.log('[UKB] Illegal/Malformed Request to webserver');
       return;
     }
-    client.accessToken(
-        query.oauth_token,
-        query.oauth_token_secret,
-        query.oauth_verifier
-    ).then(tokens => {
-      var { token, tokenSecret } = tokens;
-      users[id].request_token_secret = tokenSecret;
-      client.auth(token, tokenSecret)
-        .get("/api/v1/user", { casing: "camel" })
-        .then(response => {
-          if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
-          var rem = new Discord.RichEmbed();
-          rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
-          rem.setFooter('You\'re all set up!');
-          rem.setColor('#BADA55');
-          discordClient.users.get(id).send({embed: rem})
-          users[i].info = response.body;
-          users[i].lastUpdate = new Date();
-        })
-    })
+    client.accessToken(query.oauth_token, query.oauth_token_secret, query.oauth_verifier)
+      .then(tokens => {
+        var { token, tokenSecret } = tokens;
+        users[id].request_token_secret = tokenSecret;
+        client.auth(token, tokenSecret)
+          .get("/api/v1/user", { casing: "camel" })
+          .then(response => {
+            if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
+            var rem = new Discord.RichEmbed();
+            rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
+            rem.setFooter('You\'re all set up!');
+            rem.setColor('#BADA55');
+            discordClient.users.get(id).send({embed: rem})
+            users[i].info = response.body;
+            users[i].lastUpdate = new Date();
+          })
+      })
   }
 });
 webClient.listen(PORT, function () {
