@@ -53,13 +53,21 @@ fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
 })
 var discordClient = new Discord.Client();
 var commandsRun = 0;
-var { TOKEN, SECRET, KEY } = process.env;
+var { TOKEN, SECRET, KEY, DATABASE_URL } = process.env;
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
   console.log(dbTokens)
   TOKEN = dbTokens.token;
   SECRET = dbTokens.secret;
   KEY = dbTokens.key;
+  DATABASE_URL = dbTokens.databaseUrl
+  DB = {
+    USER: dbTokens.user,
+    HOST: dbTokens.host,
+    DB: dbTokens.db,
+    PASSWORD: dbTokens.password,
+    PORT: dbTokens.port
+  }
 }
 
 // Discord Token loading
@@ -109,10 +117,20 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
     };
 
 // PostgreSQL client
-const pgSQLClient = new Client({connectionString: process.env.DATABASE_URL});
+const pgSQLClient = new Client(DEBUG ? {
+  user: DB.USER,
+  host: DB.HOST,
+  database: DB.DB,
+  password: DB.PASSWORD,
+  port: DB.PORT,
+  ssl: true
+} : {connectionString: DATABASE_URL});
 pgSQLClient.connect()
   .then(()=>{
     console.log('[UKB] SQL connection acquired.')
+  })
+  .catch((e)=>{
+    console.log(e.stack)
   })
 
 // Commands
@@ -173,19 +191,22 @@ var commands = {
         associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
         userID = associatedDiff[0][0];
       }
-      if(!users[userID]){
-        dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`.')
-      }else{
+      pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + userID + '\';', (err, res) => {
+        console.log(err, res, userID)
+        if(err){
+          dError(message, 'It looks like that user hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`.');
+          return;
+        }
+        var data = res.rows[0];
         var userDist = discordClient.users.get(userID);
         if(userDist && +userID !== 1){
           var ee = new Discord.RichEmbed();
           ee.setTitle(userDist.username, userDist.avatarURL)
-          console.log(users[userID])
-          ee.setDescription(`${userDist.username} is **${users[userID].nickname}** *(@${users[userID].username})*`);
+          ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*`);
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         }
-      }
+      })
     }
   }
 }
@@ -224,6 +245,7 @@ webClient.get('/', function (req, res) {
       .then(tokens => {
         var { token, tokenSecret } = tokens;
         users[id].request_token_secret = tokenSecret;
+        console.log('[UKB] Tokens accessed. Getting profile information...')
         client.auth(token, tokenSecret)
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
@@ -244,12 +266,17 @@ webClient.get('/', function (req, res) {
             // badgeCounts
             // discussionBanned
             // opt-in email?
-            pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
-              .then(res => {
-                console.log('query complete')
-                // { name: 'brianc', email: 'brian.m.carlson@gmail.com' }
-              })
-              .catch(e => console.error(e.stack))
+            pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', (err, res) => {
+              console.log(id, res)
+              if(err){
+                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)', [id, users[i].request_token, users[i].request_secret, users[i].oauth_verifier, users[i].request_token_secret, users[i].streakStartedAt, users[i].username, users[i].points, users[i].firstVisit, users[i].joined, users[i].nickname, users[i].lastUpdate])
+                  .then(resd => {
+                    console.log('query complete', resd.rows[0])
+                    // { name: 'brianc', email: 'brian.m.carlson@gmail.com' }
+                  })
+                  .catch(e => console.error(e.stack))
+              }
+            })
           })
       })
   }
