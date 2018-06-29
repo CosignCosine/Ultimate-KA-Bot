@@ -146,7 +146,7 @@ var commands = {
         var associatedDiff = [];
         for(var [key, value] of discordClient.users){
           associatedDiff.push(key, levenshtein(userID, value.username));
-          associatedDiff.push(key, levenshtein(userID, message.guild.users.get(value.id).nickname))
+          associatedDiff.push(key, levenshtein(userID, message.guild.members.get(value.id).nickname))
         }
         associatedDiff = associatedDiff.sort();
         console.log(associatedDiff)
