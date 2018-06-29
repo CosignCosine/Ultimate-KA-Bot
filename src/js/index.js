@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = 0,
+const DEBUG = false,
       PREFIX = 'ka!',
       COLORS = {
         INFORMATION: '#8fb6d4',
@@ -13,7 +13,7 @@ const DEBUG = 0,
       },
       RELOAD_CHANNEL = '460219376654876673',
       PING_USER = '198942810571931649', // Scott
-      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://0.0.0.0/'][DEBUG],
+      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://0.0.0.0/'][DEBUG&1],
       KA = 'www.khanacademy.org',
       PORT = process.env.PORT || 8080;
 /**
@@ -138,6 +138,14 @@ var commands = {
   },
   whois: {
     run(message, arg){
+      var userID = arg.replace(/\!|\@|<|>/gim, '');
+      if(!isNaN(userID)){
+        console.log(userID);
+        var associatedDiff = {};
+        for(var [key, value] of discordClient.users){
+          console.log(key, value)
+        }
+      }
       message.channel.send(arg)
       console.log(arg)
     }
