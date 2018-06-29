@@ -51,6 +51,7 @@ fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   version = data.version;
 })
 var discordClient = new Discord.Client();
+var commandsRun = 0;
 
 // Discord Token loading
 discordClient.login(process.env.TOKEN)
@@ -68,13 +69,14 @@ const client = new OAuth1Client({
 
 // Utility functions
 var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {}),
-    confirmation = message => {
+    confirmation = (message, channel) => {
+      if(!channel) channel = message.channel.id;
       var acceptEmbed = new Discord.RichEmbed();
       acceptEmbed.setTitle('Information');
       acceptEmbed.setDescription('Data has been sent to your DMs.');
       acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the data.')
       acceptEmbed.setColor(COLORS.INFORMATION);
-      message.channel.send({embed: acceptEmbed});
+      discordClient.channels.get(channel).send({embed: acceptEmbed});
     },
     dError = (message, messageContent) => {
       var ee = new Discord.RichEmbed();
@@ -212,12 +214,22 @@ webClient.listen(PORT, function () {
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
   discordClient.user.setPresence({ game: { name: 'Version ' + version + " | " + PREFIX + "help" }, status: 'idle' })
+  setInterval(function(){
+    var acceptEmbed = new Discord.RichEmbed();
+    acceptEmbed.setTitle('Statistics');
+    acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
+    acceptEmbed.setFooter('This data reloads every 20 minutes.')
+    acceptEmbed.setColor(COLORS.INFORMATION);
+    discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
+    commadsRun = 0;
+  }, 1200000)
 });
 discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
     var command = message.content.replace(PREFIX, '').split(' ')[0];
     var arg = message.content.substr(command.length + PREFIX.length + 1, message.content.length-1)
     if(commands[command]){
+      commandsRun++;
       commands[command].run(message, arg);
     }else{
       message.channel.send('no')
