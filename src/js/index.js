@@ -50,7 +50,26 @@ const client = new OAuth1Client({
 
 
 var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {});
-
+const COLORS = {
+  INFORMATION: '#a8bccb',
+  COMPLETE: '#BADA55',
+  ERROR: '#FF0000'
+}
+var confirmation = message => {
+  var acceptEmbed = new Discord.RichEmbed();
+  acceptEmbed.setTitle('Information');
+  acceptEmbed.setDescription('Information has been sent to your DMs.');
+  acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the data.')
+  acceptEmbed.setColor(COLORS.INFORMATION);
+  message.channel.send({embed: acceptEmbed});
+};
+var dError = (message, messageContent) => {
+  var ee = new Discord.RichEmbed();
+  ee.setTitle('Error!')
+  ee.setDescription(messageContent);
+  ee.setColor(COLORS.ERROR);
+  message.channel.send({embed: ee});
+};
 // Commands
 var commands = {
   ka: {
@@ -60,11 +79,8 @@ var commands = {
         acceptEmbed.setTitle('KA Login');
         acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
         acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
-        acceptEmbed.setColor('#BADA55');
+        acceptEmbed.setColor(COLORS.INFORMATION);
         message.channel.send({embed: acceptEmbed})
-          .catch(e => {
-            message.channel.send('Hey ' + message.author + ', I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?')
-          })
         client.requestToken()
           .then(response => {
             users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
@@ -72,27 +88,27 @@ var commands = {
             var loginEmbed = new Discord.RichEmbed();
             loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
             loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
-            loginEmbed.setColor('#BADA55')
+            loginEmbed.setColor(COLORS.COMPLETE)
             message.author.send({embed: loginEmbed})
+              .catch(e => {
+                dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
+              })
           })
       }
     },
     banned: {
       run(message, args){
         if(!users[message.author.id]){
-          var ee = new Discord.RichEmbed();
-          ee.setTitle('Error!')
-          ee.setDescription('It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
-          ee.setColor('#FF0000');
-          message.channel.send({embed: ee});
+          dError(message, 'It looks like you haven\'t yet set up a profile with `u&ka&login`. Please run that command before trying to get private statistics about your account!');
         }else{
+          confirmation(message);
           var ee = new Discord.RichEmbed();
           ee.setTitle('Discussion Ban')
           ee.setDescription(`You have ${users[message.author.id].discussionBanned ? '' : 'not '}been discussion banned.`);
-          ee.setColor('#BADA55');
+          ee.setColor(COLORS.COMPLETE);
           message.author.send({embed: ee})
             .catch(e => {
-              message.channel.send('Hey ' + message.author + ', I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can send the information?')
+              dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
             })
         }
       }
