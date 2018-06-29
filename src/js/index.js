@@ -39,7 +39,7 @@ const request = require('request');
 const express = require('express');
 const webClient = express();
 const OAuth1Client = require("oauth-1-client");
-fs.readFile(__dirname + '/../../package.json', 'utf-8', (response) => {
+fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   console.log(response)
 })
 var discordClient = new Discord.Client();
@@ -103,7 +103,6 @@ var commands = {
       client.requestToken()
         .then(response => {
           users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
-          console.log(users[message.author.id]);
           var loginEmbed = new Discord.RichEmbed();
           loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
           loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
@@ -140,7 +139,7 @@ commands.help = {
     ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX + '**')}**`);
     ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
     ee.setColor(COLORS.COMPLETE);
-    message.author.send({embed: ee})
+    message.channel.send({embed: ee})
   }
 }
 
@@ -181,7 +180,6 @@ webClient.get('/', function (req, res) {
           discordClient.users.get(id).send({embed: rem})
           users[i].info = response.body;
           users[i].lastUpdate = new Date();
-          console.log(users[i].info, i)
         })
     })
   }
