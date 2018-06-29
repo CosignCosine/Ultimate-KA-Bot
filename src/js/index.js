@@ -293,7 +293,7 @@ webClient.get('/', function (req, res) {
             rem.setColor('#BADA55');
             discordClient.users.get(id).send({embed: rem})
             query(id, (err, res) => {
-              console.log(res.rows);
+              console.log(err, res.rows);
               if(err || res.rows.length !== 1){
                 pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
                   .then(resd => {
