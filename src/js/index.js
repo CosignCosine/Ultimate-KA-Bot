@@ -345,9 +345,9 @@ discordClient.on('message', (message) => {
 });
 discordClient.on('guildCreate', (guild) => {
   var potentialChannels = [];
-  for(var i of guild.channels){
-    if(i.name.match(/login|entrance|welcome|exit/gim)){
-      potentialChannels.push(i.id);
+  for(var i = 0; i < guild.channels.array().length; i++){
+    if(guild.channels.array()[i].name.match(/login|entrance|welcome|exit/gim)){
+      potentialChannels.push(guild.channels.array()[i].id);
     }
   }
   potentialChannels.sort((a, b) => a.length - b.length);
