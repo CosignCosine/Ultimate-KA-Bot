@@ -189,7 +189,7 @@ var commands = {
         })
       })
     },
-    documentation: 'This commands allows the user to check if their KA account is discussion banned. `Note: This information is private and will be sent to DMs only. If you choose to make it public that is up to you.`'
+    documentation: 'This command allows the user to check if their KA account is discussion banned. `Note: This information is private and will be sent to DMs only. If you choose to make it public that is up to you.`'
   },
   whois: {
     run(message, arg){
@@ -246,7 +246,8 @@ var commands = {
           })
         }
       }
-    }
+    },
+    documentation: "This command allows the user to see who another user is on KA. You can ping them or type their name or nickname. Additionally, you can say \"on discord\" to do an exact username search like such: `" + PREFIX + "whois user on discord`"
   }
 }
 commands.help = {
@@ -342,6 +343,21 @@ discordClient.on('message', (message) => {
     }
   }
 });
+discordClient.on('guildCreate', (guild) => {
+  var potentialChannels = [];
+  for(var i of guild.channels){
+    if(i.name.match(/login|entrance|welcome|exit/gim)){
+      potentialChannels.push(i.id);
+    }
+  }
+  potentialChannels.sort((a, b) => a.length - b.length);
+  pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3)', [guild.id, 0, "1" || potentialChannels[0]])
+    .then(resd => {
+      console.log('[UKB] Data uploaded to servers!');
+      delete users[i];
+    })
+    .catch(e => console.error(e.stack))
+})
 
 // Process handlers
 process.on('SIGINT', handleShutdown);
