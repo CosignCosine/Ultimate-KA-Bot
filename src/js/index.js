@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = false,
+const DEBUG = true,
       PREFIX = 'ka!',
       COLORS = {
         INFORMATION: '#8fb6d4',
@@ -318,13 +318,16 @@ discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
   discordClient.user.setPresence({ game: { name: DEBUG ? 'Running locally, low functionality' : ('Version ' + version + " | " + PREFIX + "help") }, status: 'idle' })
   interval = setInterval(function(){
-    var acceptEmbed = new Discord.RichEmbed();
-    acceptEmbed.setTitle('Statistics');
-    acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
-    acceptEmbed.setFooter('This data reloads every 20 minutes.')
-    acceptEmbed.setColor(COLORS.INFORMATION);
-    discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
-    commadsRun = 0;
+    request('http://ukb.herokuapp.com/', (err, res) => {
+      var acceptEmbed = new Discord.RichEmbed();
+      acceptEmbed.setTitle('Statistics');
+      acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
+      acceptEmbed.setFooter('This data reloads every 20 minutes.');
+      acceptEmbed.addField('Errors', err ? err.stack : 'none')
+      acceptEmbed.setColor(COLORS.INFORMATION);
+      discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
+      commadsRun = 0;
+    })
   }, 1200000)
 });
 discordClient.on('message', (message) => {
