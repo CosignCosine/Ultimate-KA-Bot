@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = true,
+const DEBUG = false,
       PREFIX = 'ka!',
       COLORS = {
         INFORMATION: '#8fb6d4',
