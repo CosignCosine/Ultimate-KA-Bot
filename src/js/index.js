@@ -5,10 +5,10 @@
 // @TODO heroku pgsql database?
 
 const DEBUG = false,
-      PREFIX = 'ka!',
+      PREFIX = DEBUG ? 'D_ka!' : 'ka!',
       COLORS = {
-        INFORMATION: '#8fb6d4',
-        COMPLETE: '#BADA55',
+        INFORMATION: '#95c0ff',
+        COMPLETE: '#0066ff',
         ERROR: '#FF0000'
       },
       RELOAD_CHANNEL = '460219376654876673',
@@ -248,6 +248,23 @@ var commands = {
       }
     },
     documentation: "This command allows the user to see who another user is on KA. You can ping them or type their name or nickname. Additionally, you can say \"on discord\" to do an exact username search like such: `" + PREFIX + "whois user on discord`"
+  },
+  setLoginChannel: {
+    run(message, args){
+      pgSQLClient.query("UPDATE servers SET login_channel=$1 WHERE id=$2;", [args, message.guild.id])
+        .then(resd => {
+          console.log('[UKB] Data uploaded!');
+        })
+        .catch(e => console.error(e.stack))
+    },
+    documentation: "A WIP command.",
+    permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  setLoginMandatory: {
+    run(message, args){
+
+    },
+    documentation: "A WIP command."
   }
 }
 commands.help = {
@@ -335,9 +352,14 @@ discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
     var command = message.content.replace(PREFIX, '').split(' ')[0];
     var arg = message.content.substr(command.length + PREFIX.length + 1, message.content.length-1)
+    var member = message.guild.members.get(message.author.id);
     if(commands[command]){
-      commandsRun++;
-      commands[command].run(message, arg);
+      if(member.permissions.has(commands[command].permissions)){
+        commandsRun++;
+        commands[command].run(message, arg, member);
+      }else{
+        message.channel.send('cant')
+      }
     }else{
       message.channel.send('no')
     }
@@ -354,7 +376,6 @@ discordClient.on('guildCreate', (guild) => {
   pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3)', [guild.id, 0, "1" || potentialChannels[0]])
     .then(resd => {
       console.log('[UKB] Data uploaded to servers!');
-      delete users[i];
     })
     .catch(e => console.error(e.stack))
 })
