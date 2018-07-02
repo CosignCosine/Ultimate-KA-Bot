@@ -262,9 +262,21 @@ var commands = {
   },
   setLoginMandatory: {
     run(message, args){
-
+      pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
+        .then(res => {
+          pgSQLClient.query("UPDATE servers SET login_mandatory=$1 WHERE id=$2;", [+(!+res.rows[0].login_mandatory), message.guild.id])
+            .then(resd => {
+              console.log('[UKB] Data uploaded!');
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor('Login is now ' + ((+res.rows[0].login_mandatory === 0) ? "not " : "") + "mandatory.")
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            })
+        })
     },
-    documentation: "A WIP command."
+    documentation: "A WIP command.",
+    permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
   }
 }
 commands.help = {
