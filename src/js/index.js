@@ -290,7 +290,7 @@ commands.help = {
   }
 }
 for(var i in commands){
-  if(!commands[i].permissions) commands[i].permissions = ['VIEW_CHANNEL'];
+  if(commands[i] && !commands[i].permissions) commands[i].permissions = ['VIEW_CHANNEL'];
 }
 
 // Web
