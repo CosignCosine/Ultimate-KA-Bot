@@ -289,6 +289,9 @@ commands.help = {
     message.channel.send({embed: ee})
   }
 }
+for(var i in commands){
+  if(!commands[i].permissions) commands[i].permissions = ['VIEW_CHANNEL'];
+}
 
 // Web
 webClient.engine('html', require('ejs').renderFile);
