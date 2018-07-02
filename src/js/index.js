@@ -450,7 +450,8 @@ webClient.get('/', function (req, res) {
                   .then(resd => {
                     for(var server of resd.rows){
                       if(server.login_mandatory){
-                        discordClient.guilds.get(server.id).members.get(id).addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                        var member = discordClient.guilds.get(server.id).members.get(id);
+                        member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
                       }
                     }
                   })
