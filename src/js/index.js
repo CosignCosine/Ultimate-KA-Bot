@@ -5,7 +5,7 @@
 // @TODO heroku pgsql database?
 
 const DEBUG = false,
-      PREFIX = DEBUG ? 'D_ka!' : 'ka!',
+      PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
         COMPLETE: '#0066ff',
@@ -251,9 +251,14 @@ var commands = {
   },
   setLoginChannel: {
     run(message, args){
-      pgSQLClient.query("UPDATE servers SET login_channel=$1 WHERE id=$2;", [args, message.guild.id])
+      pgSQLClient.query("UPDATE servers SET login_channel=$1 WHERE id=$2;", [args.replace(/<|#|>/gim, ''), message.guild.id])
         .then(resd => {
           console.log('[UKB] Data uploaded!');
+          var ee = new Discord.RichEmbed();
+          ee.setAuthor('The login channel is now <#' + res.rows[0].login_channel + ">.")
+          ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+          ee.setColor(COLORS.COMPLETE);
+          message.channel.send({embed: ee})
         })
         .catch(e => console.error(e.stack))
     },
@@ -268,7 +273,7 @@ var commands = {
             .then(resd => {
               console.log('[UKB] Data uploaded!');
               var ee = new Discord.RichEmbed();
-              ee.setAuthor('Login is now ' + ((+res.rows[0].login_mandatory === 0) ? "not " : "") + "mandatory.")
+              ee.setAuthor('Login is now ' + ((+res.rows[0].login_mandatory === 1) ? "not " : "") + "mandatory.")
               ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
               ee.setColor(COLORS.COMPLETE);
               message.channel.send({embed: ee})
@@ -277,6 +282,111 @@ var commands = {
     },
     documentation: "A WIP command.",
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  serverStats: {
+    run(message, args){
+      pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
+        .then(res => {
+          var ee = new Discord.RichEmbed();
+          ee.setAuthor(message.guild.name, message.guild.iconURL);
+          ee.addField('id', message.guild.id);
+          ee.addField('Number of members', message.guild.memberCount);
+          ee.addField('Owner', message.guild.owner);
+          ee.addField('Login Channel', res.rows[0].login_channel === '1' ? 'Unset' : '<#' + res.rows[0].login_channel + '>')
+          ee.addField('Login Mandatory', ((+res.rows[0].login_mandatory === 0) ? "Not " : "") + "Mandatory")
+          ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+          ee.setColor(COLORS.COMPLETE);
+          message.channel.send({embed: ee})
+        })
+    }
+  },
+  generateVerifiedRole: {
+    run(message, args){
+      pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
+        .then(res => {
+          if(res.rows[0].login_channel === '1'){
+            dError(message, "You need a login channel in order to make a verified role!");
+          }else{
+            if(res.rows[0].login_mandatory.toString() === '0'){
+              dError(message, "Login must be mandatory for this to work!");
+            }else{
+              var loginChannel = message.guild.channels.get(res.rows[0].login_channel);
+              var everyone = message.guild.roles.first();
+              var verified, PermissionError = false;
+              if(!message.guild.roles.find('name', 'Verified')){
+                message.guild.createRole({
+                  name: 'Verified'
+                })
+                .catch(e => {
+                  dError(message, "I don't have permisions to do this!");
+                  PermissionError = true;
+                })
+              }
+              if(PermissionError) return; // @TODO remove these and just kill the command after a permission error
+              verified = message.guild.roles.find('name', 'Verified');
+              everyone.setPermissions(['SEND_MESSAGES', 'READ_MESSAGE_HISTORY'], 'Automatic Verified role generation')
+                .catch(e => {
+                  dError(message, "I don't have permisions to do this!");
+                  PermissionError = true;
+                })
+              if(PermissionError) return;
+              verified.setPermissions(['VIEW_CHANNEL', 'SEND_MESSAGES', 'EMBED_LINKS', 'ATTACH_FILES', 'READ_MESSAGE_HISTORY', 'USE_EXTERNAL_EMOJIS'], 'Automatic Verified role generation')
+              loginChannel.overwritePermissions(everyone, {
+                VIEW_CHANNEL: true,
+                SEND_MESSAGES: true
+              })
+              loginChannel.overwritePermissions(verified, {
+                VIEW_CHANNEL: false,
+                SEND_MESSAGES: false
+              })
+              var pleaseLogin = new Discord.RichEmbed();
+              pleaseLogin.setAuthor(message.guild.name, message.guild.iconURL);
+              pleaseLogin.setDescription('Hello! The administrators of this server have made KA login mandatory for entrance. In order to enter this server, type `' + PREFIX + 'login` and send it in this channel. You will get connection instructions in DM.')
+              pleaseLogin.setColor(COLORS.ERROR);
+              loginChannel.send({embed: pleaseLogin});
+
+              var loginEnabled = new Discord.RichEmbed();
+              loginEnabled.setAuthor(message.guild.name, message.guild.iconURL);
+              loginEnabled.setDescription('Verified role generated. Locked channels for non-verified users. Searching for previously logged-in users...')
+              loginEnabled.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              loginEnabled.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: loginEnabled})
+                .then((sentEmbed) => {
+                  pgSQLClient.query('SELECT * FROM users;', [])
+                    .then(result => {
+                      console.log(result);
+                      var addedToMembers = 0;
+                      for(var member of message.guild.members){
+                        if(result.rows.find(el => el.id === member[0])){
+                          member[1].addRole(verified, 'KAID: ' + result.rows[result.rows.findIndex(el => el.id === member[0])].kaid);
+                          addedToMembers++;
+                        }
+                      }
+                      loginEnabled.addField('Users Found', addedToMembers);
+                      sentEmbed.edit({embed: loginEnabled});
+                    })
+                })
+            }
+          }
+        })
+    },
+    documentation: 'Generates automatic verified role.',
+    permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  delete: {
+    run(message, arg){
+      message.channel.fetchMessages({limit: +arg+1})
+        .then(c => {
+          var q = c.deleteAll()
+            q[q.length-1].then(() => {
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor('Deleted ' + (q.length-1) + ' messages.');
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            })
+        });
+    }
   }
 }
 commands.help = {
@@ -290,7 +400,7 @@ commands.help = {
   }
 }
 for(var i in commands){
-  if(commands[i] && !commands[i].permissions) commands[i].permissions = ['VIEW_CHANNEL'];
+  if(commands[i] && !commands[i].permissions) commands[i].permissions = ['READ_MESSAGE_HISTORY'];
 }
 
 // Web
@@ -336,6 +446,14 @@ webClient.get('/', function (req, res) {
                     delete users[i];
                   })
                   .catch(e => console.error(e.stack))
+                pgSQLClient.query('SELECT * FROM servers;', [])
+                  .then(resd => {
+                    for(var server of resd.rows){
+                      if(server.login_mandatory){
+                        discordClient.guilds.get(server.id).members.get(id).addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                      }
+                    }
+                  })
               }
             })
           })
@@ -349,19 +467,21 @@ webClient.listen(PORT, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
-  discordClient.user.setPresence({ game: { name: DEBUG ? 'Running locally, low functionality' : ('Version ' + version + " | " + PREFIX + "help") }, status: 'idle' })
-  interval = setInterval(function(){
-    request('http://ukb.herokuapp.com/', (err, res) => {
-      var acceptEmbed = new Discord.RichEmbed();
-      acceptEmbed.setTitle('Statistics');
-      acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
-      acceptEmbed.setFooter('This data reloads every 20 minutes.');
-      acceptEmbed.addField('Errors', err ? err.stack : 'none')
-      acceptEmbed.setColor(COLORS.INFORMATION);
-      discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
-      commadsRun = 0;
-    })
-  }, 1200000)
+  discordClient.user.setPresence({ game: { name: DEBUG ? ('UKAB Beta | ' + PREFIX + "help") : ('Version ' + version + " | " + PREFIX + "help") }, status: 'idle' })
+  if(!DEBUG){
+    interval = setInterval(function(){
+      request('http://ukb.herokuapp.com/', (err, res) => {
+        var acceptEmbed = new Discord.RichEmbed();
+        acceptEmbed.setTitle('Statistics');
+        acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
+        acceptEmbed.setFooter('This data reloads every 20 minutes.');
+        acceptEmbed.addField('Errors', err ? err.stack : 'none')
+        acceptEmbed.setColor(COLORS.INFORMATION);
+        discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
+        commadsRun = 0;
+      })
+    }, 1200000)
+  }
 });
 discordClient.on('message', (message) => {
   if(message.content.startsWith(PREFIX)){
@@ -388,11 +508,31 @@ discordClient.on('guildCreate', (guild) => {
     }
   }
   potentialChannels.sort((a, b) => a.length - b.length);
-  pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3)', [guild.id, 0, "1" || potentialChannels[0]])
+  pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3)', [guild.id, 0, potentialChannels[0] || '1'])
     .then(resd => {
       console.log('[UKB] Data uploaded to servers!');
     })
     .catch(e => console.error(e.stack))
+})
+discordClient.on('guildMemberAdd', (member) => {
+  pgSQLClient.query('SELECT * FROM servers WHERE id=$1;', [member.guild.id])
+    .then(res => {
+      console.log(res.rows[0])
+      if(res.rows[0].login_mandatory.toString() === '1'){
+        pgSQLClient.query('SELECT * FROM users WHERE id=$1;', [member.id])
+          .then(resUSERS => {
+            if(!resUSERS.rows[0]){
+              var pleaseLogin = new Discord.RichEmbed();
+              pleaseLogin.setAuthor(member.guild.name, member.guild.iconURL);
+              pleaseLogin.setDescription('Hello, ' + member + '! The administrators of this server have made KA login mandatory for entrance. In order to enter this server, type `' + PREFIX + 'login` and send it in this channel. You will get connection instructions in DM.')
+              pleaseLogin.setColor(COLORS.ERROR);
+              member.guild.channels.get(res.rows[0].login_channel).send({embed: pleaseLogin});
+            }else{
+              member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + resUSERS.rows[0].kaid);
+            }
+          })
+      }
+    })
 })
 
 // Process handlers
