@@ -394,12 +394,25 @@ var commands = {
 }
 commands.help = {
   run(message, arg){
-    var ee = new Discord.RichEmbed();
-    ee.setTitle('Commands Help')
-    ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX + '**')}**`);
-    ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
-    ee.setColor(COLORS.COMPLETE);
-    message.channel.send({embed: ee})
+    if(arg === ''){
+      var ee = new Discord.RichEmbed();
+      ee.setTitle('Full Command Database')
+      ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX + '**')}**`);
+      ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
+      ee.setColor(COLORS.COMPLETE);
+      message.channel.send({embed: ee})
+    }else{
+      if(commands[arg]){
+        var ee = new Discord.RichEmbed();
+        ee.setTitle(PREFIX + arg + ' Help')
+        ee.setDescription(commands[arg].documentation);
+        ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
+        ee.setColor(COLORS.COMPLETE);
+        message.channel.send({embed: ee})
+      }else{
+
+      }
+    }
   }
 }
 for(var i in commands){
