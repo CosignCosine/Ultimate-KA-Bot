@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = true,
+const DEBUG = false,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -403,8 +403,7 @@ var commands = {
               .get("/api/v1/user", { casing: "camel" })
               .then(response => {
                 if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
-                var url = "https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid;
-                request(url, (err, resp, body) => {
+                request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid, (err, resp, body) => {
                   if(typeof body !== 'object') body = JSON.parse(body);
                   var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
                   var ee = new Discord.RichEmbed();
@@ -424,6 +423,26 @@ var commands = {
         })
     },
     documentation: 'Updates your UKAB Points. A full description can be found in the command itself.'
+  },
+  pointsLeaderboard: {
+    run(message, args){
+      pgSQLClient.query('SELECT * FROM users;')
+        .then(res => {
+          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().slice(0 + +args*10, 10 + +args*10);
+          var cc = new Discord.RichEmbed();
+          cc.setColor(COLORS.COMPLETE);
+          var str = "```md\n";
+          for(var i = 0; i < data.length; i++){
+            console.log(message.guild.members.get(data[i].id))
+            var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + data[i].username + ")";
+            str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+          }
+          str += "```";
+          cc.setAuthor('Bot Points Leaderboard', message.guild.iconURL)
+          cc.setDescription(str);
+          message.channel.send({embed: cc})
+        })
+    }
   }
 }
 commands.help = {
@@ -482,30 +501,35 @@ webClient.get('/', function (req, res) {
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
-            var rem = new Discord.RichEmbed();
-            rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
-            rem.setFooter('You\'re all set up!');
-            rem.setColor('#BADA55');
-            discordClient.users.get(id).send({embed: rem})
-            queryI(id, (err, res) => {
-              console.log(err, res.rows);
-              if(err || res.rows.length !== 1){
-                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), '0'])
-                  .then(resd => {
-                    console.log('[UKB] Data uploaded!');
-                    delete users[i];
-                  })
-                  .catch(e => console.error(e.stack))
-                pgSQLClient.query('SELECT * FROM servers;', [])
-                  .then(resd => {
-                    for(var server of resd.rows){
-                      if(server.login_mandatory){
-                        var member = discordClient.guilds.get(server.id).members.get(id);
-                        member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+            request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid, (err, resp, body) => {
+              if(typeof body !== 'object') body = JSON.parse(body);
+              var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
+              var rem = new Discord.RichEmbed();
+              rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
+              rem.setFooter('You\'re all set up!');
+              rem.addField('Your UKAB Points', totalPoints)
+              rem.setColor('#BADA55');
+              discordClient.users.get(id).send({embed: rem})
+              queryI(id, (err, res) => {
+                console.log(err, res.rows);
+                if(err || res.rows.length !== 1){
+                  pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), totalPoints])
+                    .then(resd => {
+                      console.log('[UKB] Data uploaded!');
+                      delete users[i];
+                    })
+                    .catch(e => console.error(e.stack))
+                  pgSQLClient.query('SELECT * FROM servers;', [])
+                    .then(resd => {
+                      for(var server of resd.rows){
+                        if(server.login_mandatory){
+                          var member = discordClient.guilds.get(server.id).members.get(id);
+                          member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                        }
                       }
-                    }
-                  })
-              }
+                    })
+                }
+              })
             })
           })
       })
