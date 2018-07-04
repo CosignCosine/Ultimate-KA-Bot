@@ -262,7 +262,7 @@ var commands = {
         })
         .catch(e => console.error(e.stack))
     },
-    documentation: "A WIP command.",
+    documentation: "Sets login channel. You can ping the channel or input an id. In the future, you may be able to type the name of the channel.", // @TODO in the future do that <----
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
   },
   setLoginMandatory: {
@@ -280,7 +280,7 @@ var commands = {
             })
         })
     },
-    documentation: "A WIP command.",
+    documentation: "Toggles login being mandatory for server entrance. Make sure to disable the verified role and its permissions before making login not mandatory.",
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
   },
   serverStats: {
@@ -298,7 +298,8 @@ var commands = {
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
         })
-    }
+    },
+    documentation: 'Collects server statistics helpful to automatic role generation, etc.'
   },
   generateVerifiedRole: {
     run(message, args){
@@ -386,7 +387,9 @@ var commands = {
               message.channel.send({embed: ee})
             })
         });
-    }
+    },
+    documentation: 'Deletes `x` amount of messages. Bulk deletion past two weeks will not work and will throw an error.',
+    permissions: ["MANAGE_MESSAGES"]
   }
 }
 commands.help = {
