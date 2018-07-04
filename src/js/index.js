@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = false,
+const DEBUG = true,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -390,6 +390,40 @@ var commands = {
     },
     documentation: 'Deletes `x` amount of messages. Bulk deletion past two weeks will not work and will throw an error.',
     permissions: ["MANAGE_MESSAGES"]
+  },
+  getPoints: {
+    run(message, arg){
+      var bb = new Discord.RichEmbed();
+      bb.setAuthor('Loading...', message.author.avatarURL);
+      bb.setColor(COLORS.ERROR);
+      message.channel.send({embed: bb})
+        .then(m => {
+          queryI(message.author.id, (err, res) => {
+            client.auth(res.rows[0].token, res.rows[0].secret)
+              .get("/api/v1/user", { casing: "camel" })
+              .then(response => {
+                if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
+                var url = "https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid;
+                request(url, (err, resp, body) => {
+                  if(typeof body !== 'object') body = JSON.parse(body);
+                  var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
+                  var ee = new Discord.RichEmbed();
+                  ee.setAuthor('UKAB Points for ' + message.author.username, message.author.avatarURL);
+                  ee.setDescription('You have **' + totalPoints + '** points. You have gained **' + (totalPoints - +res.rows[0].ukab_points) + '** since your last update!');
+                  ee.addField('\u200b', 'The points are calculated by a formula that takes into account your KA points, weighted badge counts, videos watched, answers, and project help request answers. Try to get as many of these as possible!')
+                  ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+                  ee.setColor(COLORS.COMPLETE);
+                  m.edit({embed: ee})
+                  pgSQLClient.query("UPDATE users SET ukab_points=$1 WHERE id=$2;", [totalPoints, message.author.id])
+                    .then(resd => {
+                      console.log('[UKB] Data uploaded!');
+                    })
+                })
+              });
+          });
+        })
+    },
+    documentation: 'Updates your UKAB Points. A full description can be found in the command itself.'
   }
 }
 commands.help = {
@@ -456,7 +490,7 @@ webClient.get('/', function (req, res) {
             queryI(id, (err, res) => {
               console.log(err, res.rows);
               if(err || res.rows.length !== 1){
-                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString()])
+                pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), '0'])
                   .then(resd => {
                     console.log('[UKB] Data uploaded!');
                     delete users[i];
