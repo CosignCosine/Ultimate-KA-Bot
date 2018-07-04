@@ -501,7 +501,7 @@ webClient.get('/', function (req, res) {
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
-            request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid, (err, resp, body) => {
+            request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + response.body.kaid, (err, resp, body) => {
               if(typeof body !== 'object') body = JSON.parse(body);
               var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
               var rem = new Discord.RichEmbed();
