@@ -13,7 +13,7 @@ const DEBUG = false,
       },
       RELOAD_CHANNEL = '460219376654876673',
       PING_USER = '198942810571931649', // Scott
-      CALLBACK_URL = ['http://ukb.herokuapp.com/', 'http://localhost/'][DEBUG&1],
+      CALLBACK_URL = ['http://ukb.herokuapp.com/login/', 'http://localhost/login/'][DEBUG&1],
       KA = 'www.khanacademy.org',
       PORT = process.env.PORT || 80;
 /**
@@ -42,7 +42,8 @@ const Discord = require('discord.js'),
       webClient = express(),
       OAuth1Client = require("oauth-1-client"),
       levenshtein = require('js-levenshtein'),
-      { Client } = require('pg');
+      { Client } = require('pg'),
+      readline = require('readline');
 
 // Load version and debug tokens
 var version = '0.0', interval;
@@ -68,6 +69,21 @@ if(DEBUG){
     PORT: dbTokens.port
   }
 }
+
+// Readline evaluation
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function consoleEvaluation(){
+  rl.question('[UKB] Console evaluation open. Type a valid javascript expression for execution.', (answer) => {
+    console.log(`[UKB] Evaluating: ${answer}`);
+    eval(answer);
+    consoleEvaluation();
+  });
+};
+consoleEvaluation();
 
 // Discord Token loading
 discordClient.login(TOKEN)
@@ -110,12 +126,48 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
               clearInterval(interval);
               process.exit()
             }).catch(e => {
-              console.log(e);
+              console.log('[UKB] Error:' + e);
             })
         })
     },
     queryI = (id, callback) => {
       pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', callback);
+    },
+    resolveUsername = (userID, guild) => {
+      return new Promise((resolve, reject) => {
+        if(!discordClient.readyAt){
+          reject('Discord client is not ready.')
+        }
+        userID = userID.replace(/\!|\@|<|>/gim, '');
+        if(isNaN(+userID)){
+          var associatedDiff = [];
+          for(var [key, value] of discordClient.users){
+            associatedDiff.push([key, levenshtein(userID, value.username)]);
+            var member;
+            if(guild){
+              member = guild.members.get(value.id);
+              if(member && member.nickname){
+                associatedDiff.push([key, levenshtein(userID, member.nickname)])
+              }
+            }
+          }
+          associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
+          userID = associatedDiff[0][0];
+        }
+        var userDist = discordClient.users.get(userID);
+        if(userDist && +userID !== 1){
+          queryI(userID, (err, res) => {
+            if(err){
+              reject('User has not connected their KA account.')
+            }
+            if(res.rows.length !== 1){
+              reject('There are multiple accounts with the same connected name.')
+            }
+            var data = {dbKAUser: res.rows[0], discordUser: userDist}
+            resolve(data);
+          })
+        }
+      })
     }
 
 // PostgreSQL client
@@ -132,13 +184,17 @@ pgSQLClient.connect()
     console.log('[UKB] PostgreSQLdb connection acquired.')
   })
   .catch((e)=>{
-    console.log(e.stack)
+    console.log('[UKB] Error:' + e.stack);
   })
 
 // Commands
 var commands = {
   login: {
     run(message, arg){
+      if(DEBUG){
+        dError(message, 'Sorry, this command is only available in non-debug mode. Please use the official bot or reload the bot with `DEBUG` set to `false`.');
+        return;
+      }
       queryI(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
           var acceptEmbed = new Discord.RichEmbed();
@@ -197,7 +253,6 @@ var commands = {
         pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
           var data = res.rows[0];
           var ee = new Discord.RichEmbed();
-          console.log(res.rows[0]);
           var userDist = discordClient.users.get(data.id)
           ee.setAuthor(userDist.username, userDist.avatarURL)
           ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
@@ -206,45 +261,19 @@ var commands = {
           message.channel.send({embed: ee})
         })
       }else{
-        var userID = arg.replace(/\!|\@|<|>/gim, '');
-        if(isNaN(+userID)){
-          var associatedDiff = [];
-          for(var [key, value] of discordClient.users){
-            associatedDiff.push([key, levenshtein(userID, value.username)]);
-            var member = message.guild.members.get(value.id);
-            if(member && member.nickname){
-              associatedDiff.push([key, levenshtein(userID, member.nickname)])
-            }
-          }
-          associatedDiff = associatedDiff.sort(function(a, b){return a[1] - b[1];})
-          userID = associatedDiff[0][0];
-        }
-        var userDist = discordClient.users.get(userID);
-        if(userDist && +userID !== 1){
-          queryI(userID, (err, res) => {
-            if(err || res.rows.length !== 1){
-              var potentialErrors = [
-                "Perhaps they need a little, uh, motivation?",
-                "Wow, they must just like being incognito.",
-                "Ok, that is epic.",
-                "Do you realize the scope of this situation and the implications it has on the society in which we live?",
-                "What if they wanted to look up their own stats?",
-                "Blaze does not approve of this message",
-                "Does this text block help me to pass the Turing Test?",
-                "We live in a society... that is ruined through this sort of thing. Dead meme, I know."
-              ]
-              dError(message, 'It looks like **' + userDist.username + '** hasn\'t connected their KA and discord accounts yet with `' + PREFIX + 'login`. *' + potentialErrors[Math.floor(Math.random()*potentialErrors.length)] + '*');
-              return;
-            }
-            var data = res.rows[0];
+        resolveUsername(arg, message.guild)
+          .then(({dbKAUser, discordUser}) => {
             var ee = new Discord.RichEmbed();
-            ee.setAuthor(userDist.username, userDist.avatarURL)
-            ee.setDescription(`${userDist.username} is **${data.nickname}** *(@${data.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${data.username})`);
+            ee.setAuthor(discordUser.username, discordUser.avatarURL)
+            ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username})`);
             ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
             ee.setColor(COLORS.COMPLETE);
             message.channel.send({embed: ee})
           })
-        }
+          .catch((e) => {
+            dError(message, e.stack || e);
+          })
+
       }
     },
     documentation: "This command allows the user to see who another user is on KA. You can ping them or type their name or nickname. Additionally, you can say \"on discord\" to do an exact username search like such: `" + PREFIX + "whois user on discord`"
@@ -301,6 +330,36 @@ var commands = {
     },
     documentation: 'Collects server statistics helpful to automatic role generation, etc.'
   },
+  kaStats: {
+    run: async function(message, arg){
+      var uname;
+      if(!arg.startsWith('@')){
+        uname = await resolveUsername(arg, message.guild);
+        uname = uname.dbKAUser.username;
+      }else{
+        uname = arg.split(' ')[0].replace(/@/gim, '');
+      }
+      request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
+        if(err){
+          dError(message, 'Khan Academy\'s API seems to be down.')
+        }
+        body = body instanceof Object ? body : JSON.parse(body);
+
+        if(body == null){
+          dError(message, 'This user could not be found or is child-accounted.')
+        }else{
+          var db = new Discord.RichEmbed();
+          db.setAuthor(body.nickname + " (@" + body.username + ")", body.avatar.imagePath.replace(/\/images\/avatars\/(?:svg\/)?(.*?)\.(?:svg|png)/ig, (match, g) => `https://www.kasandbox.org/programming-images/avatars/${g}.png`));
+          db.setDescription(body.bio.length > 0 ? body.bio : '\u200b')
+          db.setImage(body.backgroundSrc)
+          db.addField('Energy Points', body.points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")) // https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+          db.addField('Last Streak Length', body.streakLastLength + ' days')
+          db.addField('KAID', body.kaid)
+          message.channel.send({embed: db})
+        }
+      })
+    }
+  },
   generateVerifiedRole: {
     run(message, args){
       pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
@@ -331,7 +390,7 @@ var commands = {
                   PermissionError = true;
                 })
               if(PermissionError) return;
-              verified.setPermissions(['VIEW_CHANNEL', 'SEND_MESSAGES', 'EMBED_LINKS', 'ATTACH_FILES', 'READ_MESSAGE_HISTORY', 'USE_EXTERNAL_EMOJIS'], 'Automatic Verified role generation')
+              verified.setPermissions(['VIEW_CHANNEL', 'SEND_MESSAGES', 'EMBED_LINKS', 'ATTACH_FILES', 'READ_MESSAGE_HISTORY', 'USE_EXTERNAL_EMOJIS', 'CONNECT', 'SPEAK', 'USE_VAD', 'CHANGE_NICKNAME'], 'Automatic Verified role generation')
               loginChannel.overwritePermissions(everyone, {
                 VIEW_CHANNEL: true,
                 SEND_MESSAGES: true
@@ -355,7 +414,6 @@ var commands = {
                 .then((sentEmbed) => {
                   pgSQLClient.query('SELECT * FROM users;', [])
                     .then(result => {
-                      console.log(result);
                       var addedToMembers = 0;
                       for(var member of message.guild.members){
                         if(result.rows.find(el => el.id === member[0])){
@@ -405,7 +463,7 @@ var commands = {
                 if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
                 request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid, (err, resp, body) => {
                   if(typeof body !== 'object') body = JSON.parse(body);
-                  var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
+                  var totalPoints = Math.round(response.body.points / 2500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers * 5 + body.projectanswers * 2;
                   var ee = new Discord.RichEmbed();
                   ee.setAuthor('UKAB Points for ' + message.author.username, message.author.avatarURL);
                   ee.setDescription('You have **' + totalPoints + '** points. You have gained **' + (totalPoints - +res.rows[0].ukab_points) + '** since your last update!');
@@ -433,7 +491,6 @@ var commands = {
           cc.setColor(COLORS.COMPLETE);
           var str = "```md\n";
           for(var i = 0; i < data.length; i++){
-            console.log(message.guild.members.get(data[i].id))
             var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + data[i].username + ")";
             str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
           }
@@ -463,7 +520,7 @@ commands.help = {
         ee.setColor(COLORS.COMPLETE);
         message.channel.send({embed: ee})
       }else{
-
+        dError(message, 'This command doesn\'t exist!')
       }
     }
   }
@@ -475,7 +532,7 @@ for(var i in commands){
 // Web
 webClient.engine('html', require('ejs').renderFile);
 webClient.set('views', '.');
-webClient.get('/', function (req, res) {
+webClient.get('/login/', function (req, res) {
   res.render('src/html/index.html')
   const { query } = req;
   console.log('[UKB] Webserver connection acquired.')
@@ -503,7 +560,7 @@ webClient.get('/', function (req, res) {
             if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
             request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + response.body.kaid, (err, resp, body) => {
               if(typeof body !== 'object') body = JSON.parse(body);
-              var totalPoints = Math.round(response.body.points / 1500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers + body.projectanswers * 2;
+              var totalPoints = Math.round(response.body.points / 2500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers * 5 + body.projectanswers * 2;
               var rem = new Discord.RichEmbed();
               rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
               rem.setFooter('You\'re all set up!');
@@ -511,7 +568,6 @@ webClient.get('/', function (req, res) {
               rem.setColor('#BADA55');
               discordClient.users.get(id).send({embed: rem})
               queryI(id, (err, res) => {
-                console.log(err, res.rows);
                 if(err || res.rows.length !== 1){
                   pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), totalPoints])
                     .then(resd => {
@@ -542,7 +598,7 @@ webClient.listen(PORT, function () {
 // Discord
 discordClient.on('ready', () => {
   console.log('[UKB] Discord client open!');
-  discordClient.user.setPresence({ game: { name: DEBUG ? ('UKAB Beta | ' + PREFIX + "help") : ('Version ' + version + " | " + PREFIX + "help") }, status: 'idle' })
+  discordClient.user.setPresence({ game: { name: ('Version ' + version + (DEBUG?'b':'') + " | " + PREFIX + "help") }, status: 'idle' })
   if(!DEBUG){
     interval = setInterval(function(){
       request('http://ukb.herokuapp.com/', (err, res) => {
@@ -568,10 +624,10 @@ discordClient.on('message', (message) => {
         commandsRun++;
         commands[command].run(message, arg, member);
       }else{
-        message.channel.send('cant')
+        dError(message, 'You need more permissions to run this command.')
       }
     }else{
-      message.channel.send('no')
+      dError(message, 'This command does not exist.')
     }
   }
 });
