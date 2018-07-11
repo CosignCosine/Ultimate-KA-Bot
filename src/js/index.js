@@ -224,7 +224,6 @@ var commands = {
     },
     documentation: 'This commands allows the user to login to their KA account.'
   },
-  link: this.login,
   banned: {
     run(message, arg){
       queryI(message.author.id, (err, res) => {
@@ -389,10 +388,13 @@ var commands = {
           db.addField('Energy Points', body.points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")) // https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
           db.addField('Last Streak Length', body.streakLastLength + ' days')
           db.addField('KAID', body.kaid)
+          db.setFooter(body.userLocation.displayText);
+          db.setColor(COLORS.COMPLETE)
           message.channel.send({embed: db})
         }
       })
-    }
+    },
+    documentation: 'Gets statistics about a user\'s KA account.'
   },
   generateVerifiedRole: {
     run(message, args){
@@ -520,21 +522,25 @@ var commands = {
     run(message, args){
       pgSQLClient.query('SELECT * FROM users;')
         .then(res => {
+          console.log('firing')
           var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().slice(0 + +args*10, 10 + +args*10);
           var cc = new Discord.RichEmbed();
           cc.setColor(COLORS.COMPLETE);
           var str = "```md\n";
           for(var i = 0; i < data.length; i++){
             console.log(data[i])
-            var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
-            str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+            if(message.guild.members.get(data[i].id)){
+              var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
+              str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+            }
           }
           str += "```";
           cc.setAuthor('Bot Points Leaderboard', message.guild.iconURL)
           cc.setDescription(str);
           message.channel.send({embed: cc})
         })
-    }
+    },
+    documentation: 'Gets the leaderboard for UKAB points.'
   }
 }
 commands.help = {
@@ -558,7 +564,8 @@ commands.help = {
         dError(message, 'This command doesn\'t exist!')
       }
     }
-  }
+  },
+  documentation: 'You are a very sad human being if you don\'t know how to use a help command.'
 }
 for(var i in commands){
   if(commands[i] && !commands[i].permissions) commands[i].permissions = ['READ_MESSAGE_HISTORY'];
@@ -601,7 +608,7 @@ webClient.get('/login/', function (req, res) {
               rem.setDescription('You\'re all set up!');
               rem.setFooter('If you would like your account to be private (hidden from other users), run `' + PREFIX + 'toggleAccountPrivate`.')
               rem.addField('Your UKAB Points', totalPoints)
-              rem.setColor('#BADA55');
+              rem.setColor(COLORS.INFORMATION);
               discordClient.users.get(id).send({embed: rem})
               queryI(id, (err, res) => {
                 if(err || res.rows.length !== 1){
@@ -616,7 +623,9 @@ webClient.get('/login/', function (req, res) {
                       for(var server of resd.rows){
                         if(server.login_mandatory){
                           var member = discordClient.guilds.get(server.id).members.get(id);
-                          member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                          if(member){
+                            member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                          }
                         }
                       }
                     })
@@ -684,7 +693,6 @@ discordClient.on('guildCreate', (guild) => {
 discordClient.on('guildMemberAdd', (member) => {
   pgSQLClient.query('SELECT * FROM servers WHERE id=$1;', [member.guild.id])
     .then(res => {
-      console.log(res.rows[0])
       if(res.rows[0].login_mandatory.toString() === '1'){
         pgSQLClient.query('SELECT * FROM users WHERE id=$1;', [member.id])
           .then(resUSERS => {
