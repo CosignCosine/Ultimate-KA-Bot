@@ -142,6 +142,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         if(isNaN(+userID)){
           var associatedDiff = [];
           for(var [key, value] of discordClient.users){
+            console.log(value.id)
             if(value.id !== '1'){
               associatedDiff.push([key, levenshtein(userID, value.username)]);
               var member;
@@ -354,13 +355,13 @@ var commands = {
     },
     documentation: 'Collects server statistics helpful to automatic role generation, etc.'
   },
-  kaStats: {
+  stats: {
     run: async function(message, arg){
       if(arg === "") arg = message.author.id;
       var uname, _private = false, kill = false;
       if(!arg.startsWith('@')){
         uname = await resolveUsername(arg, message.guild);
-        if(!uname){
+        if(!uname || !uname.dbKAUser){
           kill = true;
         }else{
           if(!!+uname.dbKAUser.private){
@@ -376,7 +377,7 @@ var commands = {
         return;
       }
       if(kill){
-        dError(message, 'User not found.s')
+        dError(message, 'User could not be found in guild.')
       }
       request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
         if(err){
@@ -538,11 +539,11 @@ var commands = {
               console.log(data[i])
               if(message.guild.members.get(data[i].id)){
                 var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
-                str += '' + (i+((+args-1)*10)+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+                str += '' + (((+args-1)*10) + (i+1)) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
               }
             }
             str += "```";
-            cc.setAuthor('Bot Points Leaderboard', message.guild.iconURL)
+            cc.setAuthor('Bot Points Leaderboard for ' + message.guild.name, message.guild.iconURL)
             cc.setDescription(str);
             message.channel.send({embed: cc})
           }else{
