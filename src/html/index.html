@@ -1,12 +1,32 @@
 <html>
   <head>
     <title>Ultimate KA Bot</title>
+    <style>
+      body{
+        background: black;
+      }
+      #header{
+        width: 50%;
+      }
+      hr{
+        border: 1px solid white;
+        width: 80%;
+      }
+      #close{
+        color: white;
+        font-family: Helvetica;
+        font-weight: 100;
+        font-size: 3em;
+      }
+    </style>
   </head>
   <body>
-    <div>You can now close this tab.</div>
+    <img src="ukab-logo.png" id="header">
+    <hr>
+    <div id='close' align='center'><br>You can now close this tab.</div>
     <script>
-    window.close();
-    self.close();
+    //window.close();
+    //self.close();
     </script>
   </body>
 </html>

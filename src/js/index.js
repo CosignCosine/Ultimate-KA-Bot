@@ -355,19 +355,26 @@ var commands = {
   },
   kaStats: {
     run: async function(message, arg){
-      var uname, _private = false;
+      var uname, _private = false, kill = false;
       if(!arg.startsWith('@')){
         uname = await resolveUsername(arg, message.guild);
-        if(!!+uname.dbKAUser.private){
-          _private = true;
+        if(!uname){
+          kill = true;
+        }else{
+          if(!!+uname.dbKAUser.private){
+            _private = true;
+          }
+          uname = uname.dbKAUser.username;
         }
-        uname = uname.dbKAUser.username;
       }else{
         uname = arg.split(' ')[0].replace(/@/gim, '');
       }
       if(_private){
         dError(message, 'This account is private!');
         return;
+      }
+      if(kill){
+        dError(message, 'User not found.s')
       }
       request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
         if(err){
@@ -391,7 +398,7 @@ var commands = {
         }
       })
     },
-    documentation: 'Gets statistics about a user\'s KA account.'
+    documentation: 'Gets statistics about a user\'s KA account. To use a KA username, add \'@\' before the username, like such: `' + PREFIX + 'kaStats @username`'
   },
   generateVerifiedRole: {
     run(message, args){
@@ -571,6 +578,7 @@ for(var i in commands){
 // Web
 webClient.engine('html', require('ejs').renderFile);
 webClient.set('views', '.');
+webClient.use( express.static( "src/public" ) );
 webClient.get('/login/', function (req, res) {
   res.render('src/html/index.html')
   const { query } = req;
