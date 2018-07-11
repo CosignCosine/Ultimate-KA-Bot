@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = false,
+const DEBUG = true,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -161,9 +161,6 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
           queryI(userID, (err, res) => {
             if(err){
               reject('User has not connected their KA account.')
-            }
-            if(res.rows.length !== 1){
-              reject('There are multiple accounts with the same connected name.')
             }
             var data = {dbKAUser: res.rows[0], discordUser: userDist}
             resolve(data);
