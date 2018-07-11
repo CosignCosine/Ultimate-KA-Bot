@@ -254,23 +254,31 @@ var commands = {
       if(message.content.replace(/\W+/gim, '').match(/ondiscord/gim)){
         pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
           var data = res.rows[0];
-          var ee = new Discord.RichEmbed();
-          var userDist = discordClient.users.get(data.id)
-          ee.setAuthor(userDist.username, userDist.avatarURL)
-          ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
-          ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
-          ee.setColor(COLORS.COMPLETE);
-          message.channel.send({embed: ee})
+          if(!+data.private){
+            var ee = new Discord.RichEmbed();
+            var userDist = discordClient.users.get(data.id)
+            ee.setAuthor(userDist.username, userDist.avatarURL)
+            ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
+            ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+            ee.setColor(COLORS.COMPLETE);
+            message.channel.send({embed: ee})
+          }else{
+            dError(message, 'This user could not be found on Discord!');
+          }
         })
       }else{
         resolveUsername(arg, message.guild)
           .then(({dbKAUser, discordUser}) => {
-            var ee = new Discord.RichEmbed();
-            ee.setAuthor(discordUser.username, discordUser.avatarURL)
-            ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username})`);
-            ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
-            ee.setColor(COLORS.COMPLETE);
-            message.channel.send({embed: ee})
+            if(!!+dbKAUser.private){
+              dError(message, 'Their account is private!');
+            }else{
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor(discordUser.username, discordUser.avatarURL)
+              ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username})`);
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            }
           })
           .catch((e) => {
             dError(message, e.stack || e);
@@ -314,6 +322,23 @@ var commands = {
     documentation: "Toggles login being mandatory for server entrance. Make sure to disable the verified role and its permissions before making login not mandatory.",
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
   },
+  toggleAccountPrivate: {
+    run(message, args){
+      pgSQLClient.query("SELECT * FROM users WHERE id=$1", [message.author.id])
+        .then(res => {
+          pgSQLClient.query("UPDATE users SET private=$1 WHERE id=$2;", [+(!+res.rows[0].private), message.author.id])
+            .then(resd => {
+              console.log('[UKB] Data uploaded!');
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor('Your account is now ' + ((res.rows[0].private === '1') ? "public" : "private") + ".")
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            })
+        })
+    },
+    documentation: "Toggles your KA account being private. This keeps your account linked but does not display its name or information. Note: **This is not recommended.**"
+  },
   serverStats: {
     run(message, args){
       pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
@@ -334,12 +359,19 @@ var commands = {
   },
   kaStats: {
     run: async function(message, arg){
-      var uname;
+      var uname, _private = false;
       if(!arg.startsWith('@')){
         uname = await resolveUsername(arg, message.guild);
+        if(!!+uname.dbKAUser.private){
+          _private = true;
+        }
         uname = uname.dbKAUser.username;
       }else{
         uname = arg.split(' ')[0].replace(/@/gim, '');
+      }
+      if(_private){
+        dError(message, 'This account is private!');
+        return;
       }
       request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
         if(err){
@@ -493,7 +525,8 @@ var commands = {
           cc.setColor(COLORS.COMPLETE);
           var str = "```md\n";
           for(var i = 0; i < data.length; i++){
-            var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + data[i].username + ")";
+            console.log(data[i])
+            var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
             str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
           }
           str += "```";
@@ -564,14 +597,15 @@ webClient.get('/login/', function (req, res) {
               if(typeof body !== 'object') body = JSON.parse(body);
               var totalPoints = Math.round(response.body.points / 2500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers * 5 + body.projectanswers * 2;
               var rem = new Discord.RichEmbed();
-              rem.setDescription(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
-              rem.setFooter('You\'re all set up!');
+              rem.setTitle(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
+              rem.setDescription('You\'re all set up!');
+              rem.setFooter('If you would like your account to be private (hidden from other users), run `' + PREFIX + 'toggleAccountPrivate`.')
               rem.addField('Your UKAB Points', totalPoints)
               rem.setColor('#BADA55');
               discordClient.users.get(id).send({embed: rem})
               queryI(id, (err, res) => {
                 if(err || res.rows.length !== 1){
-                  pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), totalPoints])
+                  pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), totalPoints, 0])
                     .then(resd => {
                       console.log('[UKB] Data uploaded!');
                       delete users[i];
