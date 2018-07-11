@@ -142,12 +142,14 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         if(isNaN(+userID)){
           var associatedDiff = [];
           for(var [key, value] of discordClient.users){
-            associatedDiff.push([key, levenshtein(userID, value.username)]);
-            var member;
-            if(guild){
-              member = guild.members.get(value.id);
-              if(member && member.nickname){
-                associatedDiff.push([key, levenshtein(userID, member.nickname)])
+            if(key != '1'){
+              associatedDiff.push([key, levenshtein(userID, value.username)]);
+              var member;
+              if(guild){
+                member = guild.members.get(value.id);
+                if(member && member.nickname){
+                  associatedDiff.push([key, levenshtein(userID, member.nickname)])
+                }
               }
             }
           }
@@ -200,7 +202,7 @@ var commands = {
           var acceptEmbed = new Discord.RichEmbed();
           acceptEmbed.setTitle('KA Login');
           acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
-          acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL.')
+          acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL. Additionally, keep in mind that by logging in, you agree to Khan Academy\'s Terms of Service.')
           acceptEmbed.setColor(COLORS.INFORMATION);
           message.channel.send({embed: acceptEmbed})
           client.requestToken()
