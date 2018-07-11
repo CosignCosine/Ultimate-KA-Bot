@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = false,
+const DEBUG = true,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -142,7 +142,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         if(isNaN(+userID)){
           var associatedDiff = [];
           for(var [key, value] of discordClient.users){
-            if(key != '1'){
+            if(value.id !== '1'){
               associatedDiff.push([key, levenshtein(userID, value.username)]);
               var member;
               if(guild){
@@ -247,6 +247,7 @@ var commands = {
   },
   whois: {
     run(message, arg){
+      if(arg === '') arg = message.author.username;
       if(message.content.replace(/\W+/gim, '').match(/ondiscord/gim)){
         pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
           var data = res.rows[0];
@@ -355,6 +356,7 @@ var commands = {
   },
   kaStats: {
     run: async function(message, arg){
+      if(arg === "") arg = message.author.id;
       var uname, _private = false, kill = false;
       if(!arg.startsWith('@')){
         uname = await resolveUsername(arg, message.guild);
@@ -526,22 +528,26 @@ var commands = {
     run(message, args){
       pgSQLClient.query('SELECT * FROM users;')
         .then(res => {
-          console.log('firing')
-          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().slice(0 + +args*10, 10 + +args*10);
-          var cc = new Discord.RichEmbed();
-          cc.setColor(COLORS.COMPLETE);
-          var str = "```md\n";
-          for(var i = 0; i < data.length; i++){
-            console.log(data[i])
-            if(message.guild.members.get(data[i].id)){
-              var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
-              str += '' + (i+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+          if(args === "" || args < 1) args = 1;
+          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().slice(0 + (+args-1)*10, 10 + (+args-1)*10);
+          if(data.length > 0){
+            var cc = new Discord.RichEmbed();
+            cc.setColor(COLORS.COMPLETE);
+            var str = "```md\n";
+            for(var i = 0; i < data.length; i++){
+              console.log(data[i])
+              if(message.guild.members.get(data[i].id)){
+                var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
+                str += '' + (i+((+args-1)*10)+1) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+              }
             }
+            str += "```";
+            cc.setAuthor('Bot Points Leaderboard', message.guild.iconURL)
+            cc.setDescription(str);
+            message.channel.send({embed: cc})
+          }else{
+            dError(message, 'There aren\'t this many users!')
           }
-          str += "```";
-          cc.setAuthor('Bot Points Leaderboard', message.guild.iconURL)
-          cc.setDescription(str);
-          message.channel.send({embed: cc})
         })
     },
     documentation: 'Gets the leaderboard for UKAB points.'
@@ -665,14 +671,15 @@ discordClient.on('ready', () => {
   }
 });
 discordClient.on('message', (message) => {
-  if(message.content.startsWith(PREFIX)){
-    var command = message.content.replace(PREFIX, '').split(' ')[0];
+  if(message.content.toLowerCase().startsWith(PREFIX.toLowerCase())){
+    var command = message.content.toLowerCase().replace(PREFIX.toLowerCase(), '').split(' ')[0];
     var arg = message.content.substr(command.length + PREFIX.length + 1, message.content.length-1)
     var member = message.guild.members.get(message.author.id);
-    if(commands[command]){
-      if(member.permissions.has(commands[command].permissions)){
+    if(Object.keys(commands).map(el => el.toLowerCase()).includes(command)){
+      var cmd = commands[Object.keys(commands).find(a => a.toLowerCase() === command)]
+      if(member.permissions.has(cmd.permissions)){
         commandsRun++;
-        commands[command].run(message, arg, member);
+        cmd.run(message, arg, member);
       }else{
         dError(message, 'You need more permissions to run this command.')
       }
