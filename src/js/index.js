@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = !!0,
+const DEBUG = !0,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -117,8 +117,13 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       ee.setColor(COLORS.ERROR);
       message.channel.send({embed: ee});
     },
-    handleShutdown = () => {
-      discordClient.channels.get(RELOAD_CHANNEL).send('Bot shutting down. If this is an error please inspect. Pinging: ' + discordClient.users.get(PING_USER).toString())
+    handleShutdown = (type, err) => {
+      var ll = new Discord.RichEmbed();
+      ll.setTitle('Shutdown');
+      ll.setDescription(`Shutdown type is **${type}**.`);
+      ll.setColor(COLORS.ERROR);
+      if(err) ll.addField('Error', err.stack)
+      discordClient.channels.get(RELOAD_CHANNEL).send(discordClient.users.get(PING_USER).toString(), {embed: ll})
         .then(m=>{
           discordClient.destroy()
             .then(()=>{
@@ -735,6 +740,14 @@ discordClient.on('guildMemberAdd', (member) => {
     })
 })
 
-// Process handlers
-process.on('SIGINT', handleShutdown);
-process.on('SIGTERM', handleShutdown);
+// Process handlers @TODO make less ugly
+process.on('SIGINT', handleShutdown.bind(null, 'SIGINT'));
+process.on('SIGTERM', handleShutdown.bind(null, 'SIGTERM'));
+process.on('SIGUSR1', handleShutdown.bind(null, 'SIGUSR1'));
+process.on('SIGUSR2', handleShutdown.bind(null, 'SIGUSR2'));
+process.on('uncaughtException', (err) => {
+  handleShutdown('ERROR (RUNTIME)', err)
+});
+process.on('unhandledRejection', (res, err) => {
+  handleShutdown('ERROR (PROMISE)', err)
+});
