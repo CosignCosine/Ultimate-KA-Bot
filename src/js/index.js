@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = !!0,
+const DEBUG = !0,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -539,7 +539,7 @@ var commands = {
           if(args === "" || args === "--guild" || +args < 1) args = "1";
 
           // data filter
-          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().filter(q => args.match(/--guild/gim) ? !!message.guild.members.get(q.id) : !!q).slice(0 + (+args - 1) * 10, 10 + (+args - 1) * 10);
+          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().filter(q => args.match(/--guild/gim) ? (!!message.guild.members.get(q.id)) : (!!q)).slice(0 + (+args - 1) * 10, 10 + (+args - 1) * 10);
 
           if(data.length > 0){
             var cc = new Discord.RichEmbed();
