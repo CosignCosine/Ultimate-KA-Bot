@@ -536,12 +536,11 @@ var commands = {
     run(message, args){
       pgSQLClient.query('SELECT * FROM users;')
         .then(res => {
+          var _args = args;
           if(args === "" || args === "--guild" || +args < 1) args = "1";
 
           // data filter
-          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().filter(q => {
-            return args.match(/--guild/gim) ? (!!message.guild.members.get(q.id)) : (!!q);
-          }).slice(0 + (+args - 1) * 10, 10 + (+args - 1) * 10);
+          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().filter(q => !!(_args.match(/--guild/gim) ? message.guild.members.get(q.id) : q)).slice(0 + (+args - 1) * 10, 10 + (+args - 1) * 10);
 
           if(data.length > 0){
             var cc = new Discord.RichEmbed();
