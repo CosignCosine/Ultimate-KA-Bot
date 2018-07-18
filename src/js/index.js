@@ -4,7 +4,7 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = false,
+const DEBUG = !!0,
       PREFIX = DEBUG ? 'B_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -142,7 +142,6 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         if(isNaN(+userID)){
           var associatedDiff = [];
           for(var [key, value] of discordClient.users){
-            console.log(value.id)
             if(value.id !== '1'){
               associatedDiff.push([key, levenshtein(userID, value.username)]);
               var member;
@@ -158,7 +157,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
           userID = associatedDiff[0][0];
         }
         var userDist = discordClient.users.get(userID);
-        if(userDist && +userID !== 1){
+        if(userDist && userID !== '1'){
           queryI(userID, (err, res) => {
             if(err){
               reject('User has not connected their KA account.')
@@ -166,6 +165,8 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
             var data = {dbKAUser: res.rows[0], discordUser: userDist}
             resolve(data);
           })
+        }else{
+          reject('User could not be found in the cache.')
         }
       })
     }
@@ -267,6 +268,10 @@ var commands = {
       }else{
         resolveUsername(arg, message.guild)
           .then(({dbKAUser, discordUser}) => {
+            if(!dbKAUser){
+              console.log(dbKAUser, discordUser);
+              throw 'User not found in database.';
+            }
             if(!!+dbKAUser.private){
               dError(message, 'Their account is private!');
             }else{
@@ -361,6 +366,7 @@ var commands = {
       var uname, _private = false, kill = false;
       if(!arg.startsWith('@')){
         uname = await resolveUsername(arg, message.guild);
+        console.log(uname);
         if(!uname || !uname.dbKAUser){
           kill = true;
         }else{
@@ -377,7 +383,8 @@ var commands = {
         return;
       }
       if(kill){
-        dError(message, 'User could not be found in guild.')
+        dError(message, 'User could not be found in guild.');
+        return;
       }
       request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
         if(err){
@@ -529,17 +536,20 @@ var commands = {
     run(message, args){
       pgSQLClient.query('SELECT * FROM users;')
         .then(res => {
-          if(args === "" || args < 1) args = 1;
-          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().slice(0 + (+args-1)*10, 10 + (+args-1)*10);
+          if(args === "" || args === "--guild" || +args < 1) args = "1";
+
+          // data filter
+          var data = res.rows.sort((a, b) => +a.ukab_points - +b.ukab_points).reverse().filter(q => args.match(/--guild/gim) ? !!message.guild.members.get(q.id) : !!q).slice(0 + (+args - 1) * 10, 10 + (+args - 1) * 10);
+
           if(data.length > 0){
             var cc = new Discord.RichEmbed();
             cc.setColor(COLORS.COMPLETE);
             var str = "```md\n";
+            console.log(discordClient.users)
             for(var i = 0; i < data.length; i++){
-              console.log(data[i])
-              if(message.guild.members.get(data[i].id)){
-                var userStr = message.guild.members.get(data[i].id).user.username + "#" + message.guild.members.get(data[i].id).user.discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
-                str += '' + (((+args-1)*10) + (i+1)) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
+              if(discordClient.users.get(data[i].id)){
+                var userStr = discordClient.users.get(data[i].id).username + "#" + discordClient.users.get(data[i].id).discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
+                str += '' + (((+args-1)*10) + (+i+1)) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
               }
             }
             str += "```";
@@ -714,6 +724,7 @@ discordClient.on('guildMemberAdd', (member) => {
               pleaseLogin.setAuthor(member.guild.name, member.guild.iconURL);
               pleaseLogin.setDescription('Hello, ' + member + '! The administrators of this server have made KA login mandatory for entrance. In order to enter this server, type `' + PREFIX + 'login` and send it in this channel. You will get connection instructions in DM.')
               pleaseLogin.setColor(COLORS.ERROR);
+              pleaseLogin.setFooter('You cannot join if you have a child account (violation of Discord and KA ToS).')
               member.guild.channels.get(res.rows[0].login_channel).send({embed: pleaseLogin});
             }else{
               member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + resUSERS.rows[0].kaid);
