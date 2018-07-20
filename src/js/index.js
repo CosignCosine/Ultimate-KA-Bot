@@ -4,8 +4,8 @@
 // @TODO emojis for prompts (redo leaf emoji?)
 // @TODO heroku pgsql database?
 
-const DEBUG = !!0,
-      PREFIX = DEBUG ? 'B_ka!' : 'ka!',
+const DEBUG = false,
+      PREFIX = DEBUG ? '_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
         COMPLETE: '#0066ff',
@@ -15,18 +15,21 @@ const DEBUG = !!0,
       PING_USER = '198942810571931649', // Scott
       CALLBACK_URL = ['http://ukb.herokuapp.com/login/', 'http://localhost/login/'][DEBUG&1],
       KA = 'www.khanacademy.org',
-      PORT = process.env.PORT || 80;
+      PORT = process.env.PORT || 80,
+      funWords = {
+        'this is so sad': 'alexa play despacito',
+        'can we get 50 likes': 'no',
+        'tucker is better': 'die lol',
+        'eat the pant': 'angerful',
+        'help': 'what if i refuse',
+        'turing test': ':sunglasses: haha no',
+        'rarted': 'no u'
+      };
 /**
 @TODO Commands left to implement:
 - ka&getNotifs
-- ka&me/ka&profile
-- ka&unlink/ka&logout
-- ka&whois/ka&who (e.g. u&ka&whois @Scott#4276 on ka [returns @ct20024], u&ka&whois ct200224 on discord [returns @Scott#4276])
 - ka&graph
 
-Administrative Commands
-- admin&setLoginChannel
-- admin&checkIfBanned (admin because this is sensitive information)
 */
 
 /**
@@ -100,6 +103,7 @@ const client = new OAuth1Client({
 });
 
 // Utility functions
+Object.filter = (obj, predicate) => Object.keys(obj).filter( key => predicate(obj[key]) ).reduce( (res, key) => (res[key] = obj[key], res), {} );
 var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {}),
     confirmation = (message, channel) => {
       if(!channel) channel = message.channel.id;
@@ -122,7 +126,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       ll.setTitle('Shutdown');
       ll.setDescription(`Shutdown type is **${type}**.`);
       ll.setColor(COLORS.ERROR);
-      if(err) ll.addField('Error', err.stack)
+      if(err) ll.addField('Error', (err.stack || err).substr(0, 1017) + (((err.stack || err).length > 1017) ? '[...]' : '\u200b'));
       discordClient.channels.get(RELOAD_CHANNEL).send(discordClient.users.get(PING_USER).toString(), {embed: ll})
         .then(m=>{
           discordClient.destroy()
@@ -571,11 +575,15 @@ var commands = {
   }
 }
 commands.help = {
-  run(message, arg){
+  run(message, arg, member){
     if(arg === ''){
+      var prunedCommands = Object.filter(commands, el => member.permissions.has(el.permissions));
       var ee = new Discord.RichEmbed();
-      ee.setTitle('Full Command Database')
-      ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(commands).join('**, ' + PREFIX + '**')}**`);
+      ee.setTitle('Command Database')
+      ee.setDescription(`The current commands are: ${PREFIX}**${Object.keys(prunedCommands).join('**, ' + PREFIX + '**')}**`);
+      if(Object.keys(prunedCommands).length != Object.keys(commands).length){
+        ee.addField('Note', 'These are not all commands that the bot can run. These commands are the ones that are available for you to run on this server. If you had more permissions, more commands would be available on this list.')
+      }
       ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
       ee.setColor(COLORS.COMPLETE);
       message.channel.send({embed: ee})
@@ -597,6 +605,7 @@ commands.help = {
 for(var i in commands){
   if(commands[i] && !commands[i].permissions) commands[i].permissions = ['READ_MESSAGE_HISTORY'];
 }
+
 
 // Web
 webClient.engine('html', require('ejs').renderFile);
@@ -678,11 +687,12 @@ discordClient.on('ready', () => {
         var acceptEmbed = new Discord.RichEmbed();
         acceptEmbed.setTitle('Statistics');
         acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
+        commadsRun = 0;
         acceptEmbed.setFooter('This data reloads every 20 minutes.');
         acceptEmbed.addField('Errors', err ? err.stack : 'none')
         acceptEmbed.setColor(COLORS.INFORMATION);
         discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
-        commadsRun = 0;
+
       })
     }, 1200000)
   }
@@ -703,6 +713,16 @@ discordClient.on('message', (message) => {
     }else{
       dError(message, 'This command does not exist.')
     }
+  }else if(message.mentions.users.get(discordClient.user.id)){
+    var fun;
+    for(var i in funWords){
+      if(new RegExp(i, 'g').exec(message.content) && !fun){
+        message.channel.send(funWords[i]);
+        fun = true;
+      }
+    }
+    if(!fun)
+      commands.help.run(message, '', message.member);
   }
 });
 discordClient.on('guildCreate', (guild) => {
@@ -744,10 +764,20 @@ discordClient.on('guildMemberAdd', (member) => {
 process.on('SIGINT', handleShutdown.bind(null, 'SIGINT'));
 process.on('SIGTERM', handleShutdown.bind(null, 'SIGTERM'));
 process.on('SIGUSR1', handleShutdown.bind(null, 'SIGUSR1'));
-process.on('SIGUSR2', handleShutdown.bind(null, 'SIGUSR2'));
+process.on('SIGUSR2', handleShutdown.bind(null, 'SIGUSR2 (NODEMON RS)'));
+process.on('error', (err) => {
+  console.log('QASD' + Object.keys(err));
+  handleShutdown('ERROR (MISC)', err)
+})
+
 process.on('uncaughtException', (err) => {
+  for(var i in err){
+    console.log(i);
+  }
+  console.error(err)
   handleShutdown('ERROR (RUNTIME)', err)
 });
 process.on('unhandledRejection', (res, err) => {
-  handleShutdown('ERROR (PROMISE)', err)
+  console.log(res, err)
+  handleShutdown('ERROR (PROMISE)', res)
 });
