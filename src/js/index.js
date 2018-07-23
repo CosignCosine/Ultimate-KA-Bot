@@ -268,7 +268,8 @@ var commands = {
     run(message, arg){
       if(arg === '') arg = message.author.username;
       if(message.content.replace(/\W+/gim, '').match(/ondiscord/gim)){
-        pgSQLClient.query('SELECT * FROM users WHERE username=\'' + arg.split(' ')[0] + '\';', (err, res) => {
+        pgSQLClient.query('SELECT * FROM users WHERE username=$1;', [arg.split(' ')[0]], (err, res) => {
+          if(err) throw err;
           var data = res.rows[0];
           if(!+data.private){
             var ee = new Discord.RichEmbed();
@@ -757,13 +758,13 @@ discordClient.on('ready', () => {
         acceptEmbed.setTitle('Statistics');
         acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
         commadsRun = 0;
-        acceptEmbed.addField('Errors', err ? err.stack : 'none')
+        acceptEmbed.addField('Errors', err ? (err.stack || err) : 'none')
         acceptEmbed.setColor(COLORS.INFORMATION);
         discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
 
       })
     }, 1200000)
-  }
+  }r
 });
 discordClient.on('message', (message) => {
   if(message.content.toLowerCase().startsWith(PREFIX.toLowerCase())){
