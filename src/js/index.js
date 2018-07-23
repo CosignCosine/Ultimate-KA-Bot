@@ -45,7 +45,6 @@ request("https://www.khanacademy.org/api/v1/badges", function(error, response, b
   if (!error && response && response.statusCode === 200) {
     var badges = JSON.parse(body);
     for (var i = 0; i < badges.length; i++) {
-      console.log(badges[i]);
         badgeCache[badges[i].description.toLowerCase()] = {
             name: badges[i].description,
             url: badges[i].absolute_url,
@@ -764,7 +763,7 @@ discordClient.on('ready', () => {
 
       })
     }, 1200000)
-  }r
+  }
 });
 discordClient.on('message', (message) => {
   if(message.content.toLowerCase().startsWith(PREFIX.toLowerCase())){
