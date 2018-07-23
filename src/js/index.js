@@ -29,12 +29,6 @@ const DEBUG = false,
 @TODO Commands left to implement:
 - ka&getNotifs
 - ka&graph
-
-*/
-
-/**
-Ideas:
-Send user a message on KA when they are banned from a server with the bot if they no longer share a server with it?
 */
 
 // Requirements and instantiation
@@ -46,18 +40,40 @@ const Discord = require('discord.js'),
       OAuth1Client = require("oauth-1-client"),
       levenshtein = require('js-levenshtein'),
       { Client } = require('pg'),
-      readline = require('readline');
+      readline = require('readline'),
+      timeAgo = require('node-time-ago');
 
-// Load version and debug tokens
 var version = '0.0', interval;
+
+var badgeCache = [];
+request("https://www.khanacademy.org/api/v1/badges", function(error, response, body){
+  if (!error && response && response.statusCode === 200) {
+    var badges = JSON.parse(body);
+    for (var i = 0; i < badges.length; i++) {
+      console.log(badges[i]);
+        badgeCache[badges[i].description.toLowerCase()] = {
+            name: badges[i].description,
+            url: badges[i].absolute_url,
+            icon: badges[i].icons.compact,
+            description: badges[i].translated_safe_extended_description,
+            points: badges[i].points,
+            category: ['Meteorite', 'Moon', 'Earth', 'Sun', 'Black Hole', 'Challenge Patch'][badges[i].badge_category],
+            color: ['#bf4028', '#136a73', '#4fb365', '#f9a11b', '#bd207b', '#3ba4bd'][badges[i].badge_category]
+        };
+    }
+  }
+})
+
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   var data = JSON.parse(response);
   version = data.version;
 })
+
 var discordClient = new Discord.Client();
 var commandsRun = 0;
 var { TOKEN, SECRET, KEY, DATABASE_URL } = process.env;
 var markedForReLogin = [];
+
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
   TOKEN = dbTokens.token;
@@ -121,7 +137,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       ee.setColor(COLORS.ERROR);
       message.channel.send({embed: ee});
     },
-    handleShutdown = (type, err) => {
+    handleShutdown = (type, err, noKill) => {
       var ll = new Discord.RichEmbed();
       ll.setTitle('Shutdown');
       ll.setDescription(`Shutdown type is **${type}**.`);
@@ -129,14 +145,16 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       if(err) ll.addField('Error', (err.stack || err).substr(0, 1017) + (((err.stack || err).length > 1017) ? '[...]' : '\u200b'));
       discordClient.channels.get(RELOAD_CHANNEL).send(discordClient.users.get(PING_USER).toString(), {embed: ll})
         .then(m=>{
-          discordClient.destroy()
-            .then(()=>{
-              console.log('[UKB] Destroyed Discord client, killed process with exit type 0.')
-              clearInterval(interval);
-              process.exit()
-            }).catch(e => {
-              console.log('[UKB] Error:' + e);
-            })
+          if(!noKill){
+            discordClient.destroy()
+              .then(()=>{
+                console.log('[UKB] Destroyed Discord client, killed process with exit type 0.')
+                clearInterval(interval);
+                process.exit()
+              }).catch(e => {
+                console.log('[UKB] Error:' + e);
+              })
+          }
         })
     },
     queryI = (id, callback) => {
@@ -299,6 +317,64 @@ var commands = {
       }
     },
     documentation: "This command allows the user to see who another user is on KA. You can ping them or type their name or nickname. Additionally, you can say \"on discord\" to do an exact username search like such: `" + PREFIX + "whois user on discord`"
+  },
+  badge: {
+    run(message, arg){
+      var tArg = arg, arg = arg.replace(/--\w+/gim, '').trim().toLowerCase();
+      if(tArg.match(/--owned/gim)){
+        message.channel.send('Loading...')
+          .then(m => {
+            queryI(message.author.id, (err, res) => {
+              console.log(res.rows[0])
+              client.auth(res.rows[0].token, res.rows[0].secret)
+                .get("/api/v1/badges", { casing: "camel" })
+                .then(response => {
+                  if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
+                  var badges = {};
+                  for(var i = 0; i < response.body.length; i++){
+                    badges[response.body[i].description.toLowerCase()] = response.body[i];
+                  }
+                  if(badges[arg]){
+                    var badge = badges[arg];
+                    console.log(badge)
+                    var badgeEmbed = new Discord.RichEmbed();
+                    badgeEmbed.setTitle(badge.description);
+                    badgeEmbed.setDescription(badge.translatedSafeExtendedDescription);
+                    badgeEmbed.setThumbnail(badge.icons.compact);
+                    badgeEmbed.setURL(badge.absoluteUrl);
+                    badgeEmbed.setColor(['#bf4028', '#136a73', '#4fb365', '#f9a11b', '#bd207b', '#3ba4bd'][badge.badgeCategory]);
+                    badgeEmbed.addField('Points Given', badge.points);
+                    badgeEmbed.addField('Category', ['Meteorite', 'Moon', 'Earth', 'Sun', 'Black Hole', 'Challenge Patch'][badge.badgeCategory]);
+                    badgeEmbed.addField('Owned?', badge.isOwned ? 'Yes' : 'No');
+                    badgeEmbed.addField('Retired?', badge.isRetired ? 'Yes' : 'No')
+                    if(badge.isOwned) badgeEmbed.addField('# Owned', badge.userBadges.length);
+                    if(badge.isOwned) badgeEmbed.addField('Date Last Acquired', timeAgo(badge.userBadges[0].date));
+                    m.edit({embed: badgeEmbed});
+                  }else{
+                    m.delete();
+                    dError(message, 'Badge not found on KA or in your profile. Are you sure you spelled it correctly?');
+                  }
+                })
+            })
+          })
+      }else{
+        if(badgeCache[arg]){
+          var badge = badgeCache[arg];
+          var badgeEmbed = new Discord.RichEmbed();
+          badgeEmbed.setTitle(badge.name);
+          badgeEmbed.setDescription(badge.description);
+          badgeEmbed.setThumbnail(badge.icon);
+          badgeEmbed.setURL(badge.url);
+          badgeEmbed.setColor(badge.color);
+          badgeEmbed.addField('Points Given', badge.points);
+          badgeEmbed.addField('Category', badge.category);
+          message.channel.send({embed: badgeEmbed});
+        }else{
+          dError(message, 'Badge not found on KA. Are you sure you spelled it correctly and that it\'s not a private badge?');
+        }
+      }
+    },
+    documentation: "This command finds a badge based on its name, e.g.: `" + PREFIX + "badge Picking Up Steam`. If you add the --owned flag, it will return a boolean that says whether you have the badge or not. (Note: this flag will only work on your account.)"
   },
   setLoginChannel: {
     run(message, args){
@@ -658,7 +734,7 @@ webClient.get('/login/', function (req, res) {
                   pgSQLClient.query('SELECT * FROM servers;', [])
                     .then(resd => {
                       for(var server of resd.rows){
-                        if(server.login_mandatory){
+                        if(server.login_mandatory && discordClient.guilds.get(server.id)){
                           var member = discordClient.guilds.get(server.id).members.get(id);
                           if(member){
                             member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
@@ -688,7 +764,6 @@ discordClient.on('ready', () => {
         acceptEmbed.setTitle('Statistics');
         acceptEmbed.setDescription('Number of commands run this cycle: **' + commandsRun + '**');
         commadsRun = 0;
-        acceptEmbed.setFooter('This data reloads every 20 minutes.');
         acceptEmbed.addField('Errors', err ? err.stack : 'none')
         acceptEmbed.setColor(COLORS.INFORMATION);
         discordClient.channels.get(RELOAD_CHANNEL).send({embed: acceptEmbed});
@@ -761,10 +836,10 @@ discordClient.on('guildMemberAdd', (member) => {
 })
 
 // Process handlers @TODO make less ugly
-process.on('SIGINT', handleShutdown.bind(null, 'SIGINT'));
-process.on('SIGTERM', handleShutdown.bind(null, 'SIGTERM'));
+process.on('SIGINT', handleShutdown.bind(null, 'SIGINT (CONTROL+C MANUAL CLOSE)'));
+process.on('SIGTERM', handleShutdown.bind(null, 'SIGTERM (HEROKU GIT CONTROL)'));
 process.on('SIGUSR1', handleShutdown.bind(null, 'SIGUSR1'));
-process.on('SIGUSR2', handleShutdown.bind(null, 'SIGUSR2 (NODEMON RS)'));
+process.on('SIGUSR2', handleShutdown.bind(null, 'SIGUSR2 (NODEMON RS)', undefined, true));
 process.on('error', (err) => {
   console.log('QASD' + Object.keys(err));
   handleShutdown('ERROR (MISC)', err)
