@@ -271,7 +271,7 @@ var commands = {
           if(err) throw err;
           var data = res.rows[0];
           if(!data){
-            dError('User is not on discord.');
+            dError(message, 'User is not on discord.');
           }else{
             if(!+data.private){
               var ee = new Discord.RichEmbed();
