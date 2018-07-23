@@ -710,7 +710,7 @@ webClient.get('/login/', function (req, res) {
               if(typeof body !== 'object') body = JSON.parse(body);
               var totalPoints = Math.round(response.body.points / 2500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers * 5 + body.projectanswers * 2;
               var rem = new Discord.RichEmbed();
-              rem.setTitle(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname + '**!')
+              rem.setTitle(['Heya', 'Hello', 'Hi', 'Sup', 'Welcome'][Math.floor(Math.random()*5)] + ', **' + response.body.studentSummary.nickname.substr(0, 200) + '**!')
               rem.setDescription('You\'re all set up!');
               rem.setFooter('If you would like your account to be private (hidden from other users), run `' + PREFIX + 'toggleAccountPrivate`.')
               rem.addField('Your UKAB Points', totalPoints)
