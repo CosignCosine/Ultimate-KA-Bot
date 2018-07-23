@@ -1,9 +1,3 @@
-// @TODO major code refactor, move all variable types to each other (const => const, var => var)
-// @TODO code sections, variable renaming
-// @TODO response functions (user sends message on discord, bot responds and waits for user input, etc.) [make recursive?]
-// @TODO emojis for prompts (redo leaf emoji?)
-// @TODO heroku pgsql database?
-
 const DEBUG = false,
       PREFIX = DEBUG ? '_ka!' : 'ka!',
       COLORS = {
@@ -16,7 +10,7 @@ const DEBUG = false,
       CALLBACK_URL = ['http://ukb.herokuapp.com/login/', 'http://localhost/login/'][DEBUG&1],
       KA = 'www.khanacademy.org',
       PORT = process.env.PORT || 80,
-      funWords = {
+      FUN_WORDS = {
         'this is so sad': 'alexa play despacito',
         'can we get 50 likes': 'no',
         'tucker is better': 'die lol',
@@ -25,11 +19,6 @@ const DEBUG = false,
         'turing test': ':sunglasses: haha no',
         'rarted': 'no u'
       };
-/**
-@TODO Commands left to implement:
-- ka&getNotifs
-- ka&graph
-*/
 
 // Requirements and instantiation
 const Discord = require('discord.js'),
@@ -43,9 +32,15 @@ const Discord = require('discord.js'),
       readline = require('readline'),
       timeAgo = require('node-time-ago');
 
-var version = '0.0', interval;
+var version = '0.0.0', // Bot version, defaults to 0.0.0
+    interval,         // Self-pinging interval (for iife)
+    badgeCache = [], // Badge cache (will be filled with badges, destroyed on bot reload)
+    discordClient = new Discord.Client(), // New Discord client
+    commandsRun = 0, // Total commands run
+    markedForReLogin = [], // An array of people who need to re-login to their accounts.
+    { TOKEN, SECRET, KEY, DATABASE_URL } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
-var badgeCache = [];
+// Fill badge cache
 request("https://www.khanacademy.org/api/v1/badges", function(error, response, body){
   if (!error && response && response.statusCode === 200) {
     var badges = JSON.parse(body);
@@ -64,16 +59,13 @@ request("https://www.khanacademy.org/api/v1/badges", function(error, response, b
   }
 })
 
+// Get version
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   var data = JSON.parse(response);
   version = data.version;
 })
 
-var discordClient = new Discord.Client();
-var commandsRun = 0;
-var { TOKEN, SECRET, KEY, DATABASE_URL } = process.env;
-var markedForReLogin = [];
-
+// Use debug parameters
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
   TOKEN = dbTokens.token;
@@ -94,7 +86,6 @@ const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-
 function consoleEvaluation(){
   rl.question('[UKB] Console evaluation open. Type a valid javascript expression for execution.', (answer) => {
     console.log(`[UKB] Evaluating: ${answer}`);
@@ -120,8 +111,7 @@ const client = new OAuth1Client({
 
 // Utility functions
 Object.filter = (obj, predicate) => Object.keys(obj).filter( key => predicate(obj[key]) ).reduce( (res, key) => (res[key] = obj[key], res), {} );
-var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('='); a[b[0]] = b[1]; return a;}, {}),
-    confirmation = (message, channel) => {
+var confirmation = (message, channel) => { // Message received, data will be sent
       if(!channel) channel = message.channel.id;
       var acceptEmbed = new Discord.RichEmbed();
       acceptEmbed.setTitle('Information');
@@ -130,14 +120,14 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       acceptEmbed.setColor(COLORS.INFORMATION);
       discordClient.channels.get(channel).send({embed: acceptEmbed});
     },
-    dError = (message, messageContent) => {
+    dError = (message, messageContent) => { // Generic error object
       var ee = new Discord.RichEmbed();
       ee.setTitle('Error!')
       ee.setDescription(messageContent);
       ee.setColor(COLORS.ERROR);
       message.channel.send({embed: ee});
     },
-    handleShutdown = (type, err, noKill) => {
+    handleShutdown = (type, err, noKill) => { // Shutdown callback
       var ll = new Discord.RichEmbed();
       ll.setTitle('Shutdown');
       ll.setDescription(`Shutdown type is **${type}**.`);
@@ -157,10 +147,10 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
           }
         })
     },
-    queryI = (id, callback) => {
+    queryUsers = (id, callback) => { // user query
       pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', callback);
     },
-    resolveUsername = (userID, guild) => {
+    resolveUsername = (userID, guild) => { // get discord username and ka account data from id and optionally the guild as well
       return new Promise((resolve, reject) => {
         if(!discordClient.readyAt){
           reject('Discord client is not ready.')
@@ -185,7 +175,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
         }
         var userDist = discordClient.users.get(userID);
         if(userDist && userID !== '1'){
-          queryI(userID, (err, res) => {
+          queryUsers(userID, (err, res) => {
             if(err){
               reject('User has not connected their KA account.')
             }
@@ -198,7 +188,7 @@ var hToObj = body => body.split('&').reduce((a, c, i) => { var b = c.split('=');
       })
     }
 
-// PostgreSQL client
+// PostgreSQL client login
 const pgSQLClient = new Client(DEBUG ? {
   user: DB.USER,
   host: DB.HOST,
@@ -223,7 +213,7 @@ var commands = {
         dError(message, 'Sorry, this command is only available in non-debug mode. Please use the official bot or reload the bot with `DEBUG` set to `false`.');
         return;
       }
-      queryI(message.author.id, (err, res) => {
+      queryUsers(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
           var acceptEmbed = new Discord.RichEmbed();
           acceptEmbed.setTitle('KA Login');
@@ -252,7 +242,7 @@ var commands = {
   },
   banned: {
     run(message, arg){
-      queryI(message.author.id, (err, res) => {
+      queryUsers(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1){
           dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
           return;
@@ -324,8 +314,11 @@ var commands = {
       if(tArg.match(/--owned/gim)){
         message.channel.send('Loading...')
           .then(m => {
-            queryI(message.author.id, (err, res) => {
-              console.log(res.rows[0])
+            queryUsers(message.author.id, (err, res) => {
+              if(!res.rows[0]){
+                dError(message, 'Account not connected!');
+                return;
+              }
               client.auth(res.rows[0].token, res.rows[0].secret)
                 .get("/api/v1/badges", { casing: "camel" })
                 .then(response => {
@@ -591,7 +584,7 @@ var commands = {
       bb.setColor(COLORS.ERROR);
       message.channel.send({embed: bb})
         .then(m => {
-          queryI(message.author.id, (err, res) => {
+          queryUsers(message.author.id, (err, res) => {
             client.auth(res.rows[0].token, res.rows[0].secret)
               .get("/api/v1/user", { casing: "camel" })
               .then(response => {
@@ -723,7 +716,7 @@ webClient.get('/login/', function (req, res) {
               rem.addField('Your UKAB Points', totalPoints)
               rem.setColor(COLORS.INFORMATION);
               discordClient.users.get(id).send({embed: rem})
-              queryI(id, (err, res) => {
+              queryUsers(id, (err, res) => {
                 if(err || res.rows.length !== 1){
                   pgSQLClient.query('INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)', [id, token, tokenSecret, response.body.username, response.body.studentSummary.nickname, response.body.kaid, new Date().toString(), totalPoints, 0])
                     .then(resd => {
@@ -790,9 +783,9 @@ discordClient.on('message', (message) => {
     }
   }else if(message.mentions.users.get(discordClient.user.id)){
     var fun;
-    for(var i in funWords){
+    for(var i in FUN_WORDS){
       if(new RegExp(i, 'g').exec(message.content) && !fun){
-        message.channel.send(funWords[i]);
+        message.channel.send(FUN_WORDS[i]);
         fun = true;
       }
     }

@@ -2,3 +2,4 @@ node_modules
 src/data/
 secret.json
 .DS_Store
+src/js/tests/
