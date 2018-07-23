@@ -270,16 +270,20 @@ var commands = {
         pgSQLClient.query('SELECT * FROM users WHERE username=$1;', [arg.split(' ')[0]], (err, res) => {
           if(err) throw err;
           var data = res.rows[0];
-          if(!+data.private){
-            var ee = new Discord.RichEmbed();
-            var userDist = discordClient.users.get(data.id)
-            ee.setAuthor(userDist.username, userDist.avatarURL)
-            ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
-            ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
-            ee.setColor(COLORS.COMPLETE);
-            message.channel.send({embed: ee})
+          if(!data){
+            dError('User is not on discord.');
           }else{
-            dError(message, 'This user could not be found on Discord!');
+            if(!+data.private){
+              var ee = new Discord.RichEmbed();
+              var userDist = discordClient.users.get(data.id)
+              ee.setAuthor(userDist.username, userDist.avatarURL)
+              ee.setDescription(`${data.nickname} is **${userDist.username}**#${userDist.discriminator} on discord.`);
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            }else{
+              dError(message, 'This user\'s profile is private!');
+            }
           }
         })
       }else{
