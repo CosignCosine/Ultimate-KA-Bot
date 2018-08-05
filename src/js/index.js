@@ -741,7 +741,7 @@ var commands = {
   },
   oopsify: {
     run(message, arg){
-      message.channel.send(arg.replace(/\./gim, '!!?!').replace(/(.)/gim, [':)', ':(', 'o\_O', '^.^', '-\_-', ...(''.repeat(20).split(''))][Math.floor(Math.random(25))] + '$1'));
+      message.channel.send(arg.replace(/\./gim, '!!?!').replace(/(\b)/gim, '$1 ' + [':)', ':(', 'o\_O', '^.^', '-\_-', ...(''.repeat(20).split(''))][Math.floor(Math.random()*25)]));
     },
     documentation: 'Does some stuff to messages!!?! o_O'
   }
