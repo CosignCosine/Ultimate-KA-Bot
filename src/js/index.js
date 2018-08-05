@@ -741,7 +741,27 @@ var commands = {
   },
   oopsify: {
     run(message, arg){
-      message.channel.send(arg.replace(/\./gim, '!!?!').replace(/(\b)/gim, '$1 ' + [':)', ':(', 'o\_O', '^.^', '-\_-', ...(''.repeat(20).split(''))][Math.floor(Math.random()*25)]));
+      var oops = arg.replace(/\@everyone|\@here/gim, '').replace(/\.\.\./gim, '.').replace(/^\b\w|[\.!?]\W+\w/gim, (match) => {
+        return match.toUpperCase();
+      })
+      if(Math.random() < 0.7){
+        oops = oops.replace(/([\!\.\?])/gim, function(a, b) {return b + (Math.random() < 0.6 ? "ENDSENT" : "");}).split(/ENDSENT/g);
+        var whoopsies = "";
+        for(var i = 0; i < oops.length; i++) {
+            whoopsies += (i + 1) + ". " + oops[i].trim() + (i+1!==oops.length ? "\u2435" : "");
+        }
+        oops = whoopsies;
+      }
+      oops = oops.replace(/[^0-9](\.)/gim, (match) => {
+        return match.replace(/\./gm, '') + ('!'.repeat(Math.floor(Math.random()*5)) + '?'.repeat(Math.floor(Math.random()*5))).split('').sort(function(){return 0.5-Math.random()}).join('');
+      }).replace(/(\s)/gim, (match) => {
+        var xD = Math.floor(Math.random()*18);
+        return [' :) ', ' :( ', ' o\\_O ', ' ^.^ ', ' -\\_- ', ' xD ', ' ^-^ ', ' 8D ', ' :D ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '][xD]
+      }).replace(/\u2435/gim, '\n') + "!!";
+      message.channel.send(oops)
+        .catch(e => {
+          message.channel.send(':( I don\'t think I can send it, it\'s a bit too long!! o\\_O')
+        })
     },
     documentation: 'Does some stuff to messages!!?! o_O'
   }
