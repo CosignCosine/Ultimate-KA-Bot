@@ -1,4 +1,4 @@
-const DEBUG = true,
+const DEBUG = false,
       PREFIX = DEBUG ? '_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
