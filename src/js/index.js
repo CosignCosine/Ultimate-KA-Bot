@@ -738,6 +738,12 @@ var commands = {
     },
     documentation: 'Makes a new announcement',
     permissions: ["ADMINISTRATOR"]
+  },
+  oopsify: {
+    run(message, arg){
+      message.channel.send(arg.replace(/\./gim, '!!?!').replace(/(.)/gim, [':)', ':(', 'o\_O', '^.^', '-\_-', ...(''.repeat(20).split(''))][Math.floor(Math.random(25))] + '$1'));
+    },
+    documentation: 'Does some stuff to messages!!?! o_O'
   }
 }
 commands.help = {
@@ -751,6 +757,7 @@ commands.help = {
         ee.addField('Note', 'These are not all commands that the bot can run. These commands are the ones that are available for you to run on this server. If you had more permissions, more commands would be available on this list.')
       }
       ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
+      ee.addField('Need help with using Discord?', 'This [link](https://support.discordapp.com/hc/en-us/articles/219470277-Getting-Started) may help.')
       ee.setColor(COLORS.COMPLETE);
       message.channel.send({embed: ee})
     }else{
@@ -759,6 +766,7 @@ commands.help = {
         ee.setTitle(PREFIX + arg + ' Help')
         ee.setDescription(commands[arg].documentation);
         ee.setFooter(`Run ${PREFIX}help [command] to find out more information about each specific command.`)
+        ee.addField('Need help with using Discord?', 'This [link](https://support.discordapp.com/hc/en-us/articles/219470277-Getting-Started) may help.')
         ee.setColor(COLORS.COMPLETE);
         message.channel.send({embed: ee})
       }else{
@@ -926,7 +934,8 @@ discordClient.on('guildMemberAdd', (member) => {
               pleaseLogin.setAuthor(member.guild.name, member.guild.iconURL);
               pleaseLogin.setDescription('Hello, ' + member + '! The administrators of this server have made KA login mandatory for entrance. In order to enter this server, type `' + PREFIX + 'login` and send it in this channel. You will get connection instructions in DM.')
               pleaseLogin.setColor(COLORS.ERROR);
-              pleaseLogin.setFooter('You cannot join if you have a child account (violation of Discord and KA ToS).')
+              pleaseLogin.addField('Need help with using Discord?', 'This [link](https://support.discordapp.com/hc/en-us/articles/219470277-Getting-Started) may help.')
+              pleaseLogin.setFooter('You cannot join this server if you have a child account, as underage users violate COPPA, which is in effect on discord. We are sorry for any inconvenience.');
               member.guild.channels.get(res.rows[0].login_channel).send({embed: pleaseLogin});
             }else{
               var q = setInterval(function(){
