@@ -1,8 +1,8 @@
 const DEBUG = false,
       PREFIX = DEBUG ? '_ka!' : 'ka!',
       COLORS = {
-        INFORMATION: '#95c0ff',
-        COMPLETE: '#0066ff',
+        INFORMATION: '#ff9595',
+        COMPLETE: '#b44949',
         ERROR: '#FF0000'
       },
       RELOAD_CHANNEL = '460219376654876673',
