@@ -3,3 +3,4 @@ src/data/
 secret.json
 .DS_Store
 src/js/tests/
+userbot.js

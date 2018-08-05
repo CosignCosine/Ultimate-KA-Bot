@@ -1,4 +1,4 @@
-const DEBUG = false,
+const DEBUG = true,
       PREFIX = DEBUG ? '_ka!' : 'ka!',
       COLORS = {
         INFORMATION: '#95c0ff',
@@ -38,7 +38,7 @@ var version = '0.0.0', // Bot version, defaults to 0.0.0
     discordClient = new Discord.Client(), // New Discord client
     commandsRun = 0, // Total commands run
     markedForReLogin = [], // An array of people who need to re-login to their accounts.
-    { TOKEN, SECRET, KEY, DATABASE_URL } = process.env; // token, secret, key, etc, needed for login and set by env vars
+    { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
 // Fill badge cache
 request("https://www.khanacademy.org/api/v1/badges", function(error, response, body){
@@ -78,6 +78,8 @@ if(DEBUG){
     PASSWORD: dbTokens.password,
     PORT: dbTokens.port
   }
+  HOOK_KEY = dbTokens.hook_key;
+  HOOK_ID = dbTokens.hook_id;
 }
 
 // Readline evaluation
@@ -312,6 +314,39 @@ var commands = {
     },
     documentation: "This command allows the user to see who another user is on KA. You can ping them or type their name or nickname. Additionally, you can say \"on discord\" to do an exact username search like such: `" + PREFIX + "whois user on discord`"
   },
+  test: {
+    run(message, arg){
+      if(DEBUG){
+        queryUsers(message.author.id, (err, res) => {
+          if(err || res.rows.length !== 1){
+            dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
+            return;
+          }
+          client.auth(res.rows[0].token, res.rows[0].secret)
+            .post("/api/internal/discussions/scratchpad/6389992281473024/comments", {text: 'hello tis i the living meme come to steal your oauth', topic_slug: 'computer-programming'})
+            .then(response => {
+              console.log(response, response.body);
+            })
+            .catch(console.error)
+        })
+      }else{
+        dError('Command not available outside of beta.')
+      }
+    },
+    documentation: 'A testing ground for new functions. Only available in debug.'
+  },
+  eval: {
+    run(message, arg){
+      try{
+        var ev = new Discord.RichEmbed().setTitle('Evaluation').setDescription('```javascript\n' + arg + '``` evaluates to `'+ eval(arg) +'`').setColor(COLORS.COMPLETE).setFooter(new Date());
+        message.channel.send({embed: ev})
+      }catch(e){
+        dError(message, e)
+      }
+    },
+    documentation: 'exploit this i dare you hahahahahahAHAHAHAHAHAHAHAHA',
+    users: ['198942810571931649']
+  },
   badge: {
     run(message, arg){
       var tArg = arg, arg = arg.replace(/--\w+/gim, '').trim().toLowerCase();
@@ -377,9 +412,9 @@ var commands = {
     run(message, args){
       pgSQLClient.query("UPDATE servers SET login_channel=$1 WHERE id=$2;", [args.replace(/<|#|>/gim, ''), message.guild.id])
         .then(resd => {
-          console.log('[UKB] Data uploaded!');
+          console.log('[UKB] Data uploaded! ', resd.rows);
           var ee = new Discord.RichEmbed();
-          ee.setAuthor('The login channel is now <#' + res.rows[0].login_channel + ">.")
+          ee.setAuthor('The login channel is now <#' + resd.rows[0].login_channel + ">.")
           ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
           ee.setColor(COLORS.COMPLETE);
           message.channel.send({embed: ee})
@@ -405,6 +440,48 @@ var commands = {
         })
     },
     documentation: "Toggles login being mandatory for server entrance. Make sure to disable the verified role and its permissions before making login not mandatory.",
+    permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  setStarboardChannel: {
+    run(message, args){
+      pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
+        .then(resulting => {
+          var starboardPrefs = JSON.parse(resulting.rows[0].starboard_config);
+          starboardPrefs.channel = args.replace(/<|#|>/gim, '');
+          pgSQLClient.query("UPDATE servers SET starboard_config=$1 WHERE id=$2;", [JSON.stringify(starboardPrefs), message.guild.id])
+            .then(resd => {
+              console.log('[UKB] Data uploaded!');
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor('The starboard channel is now <#' + starboardPrefs.channel + ">.")
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            })
+            .catch(e => console.error(e.stack))
+        })
+    },
+    documentation: "Sets starboard channel (requires manage channels)",
+    permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  setStarboardThreshold: {
+    run(message, args){
+      pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
+        .then(resulting => {
+          var starboardPrefs = JSON.parse(resulting.rows[0].starboard_config);
+          starboardPrefs.threshold = args;
+          pgSQLClient.query("UPDATE servers SET starboard_config=$1 WHERE id=$2;", [JSON.stringify(starboardPrefs), message.guild.id])
+            .then(resd => {
+              console.log('[UKB] Data uploaded!');
+              var ee = new Discord.RichEmbed();
+              ee.setAuthor('The starboard threshold is now ' + starboardPrefs.threshold + ".")
+              ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+              ee.setColor(COLORS.COMPLETE);
+              message.channel.send({embed: ee})
+            })
+            .catch(e => console.error(e.stack))
+        })
+    },
+    documentation: "Sets starboard threshold",
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
   },
   toggleAccountPrivate: {
@@ -645,6 +722,19 @@ var commands = {
         })
     },
     documentation: 'Gets the leaderboard for UKAB points.'
+  },
+  announcement: {
+    run(message, arg){
+      const hook = new Discord.WebhookClient(HOOK_ID, HOOK_KEY);
+      const emb = new Discord.RichEmbed();
+      emb.setAuthor(message.guild.name, message.guild.iconURL);
+      emb.setDescription(arg);
+      hook.send({
+        embeds: [emb]
+      }).then( l => { console.log('[UKB] Announcement made'); })
+    },
+    documentation: 'Makes a new announcement',
+    permissions: ["ADMINISTRATOR"]
   }
 }
 commands.help = {
@@ -676,7 +766,9 @@ commands.help = {
   documentation: 'You are a very sad human being if you don\'t know how to use a help command.'
 }
 for(var i in commands){
-  if(commands[i] && !commands[i].permissions) commands[i].permissions = ['READ_MESSAGE_HISTORY'];
+  if(commands[i]){
+    if(!commands[i].permissions) commands[i].permissions = ['READ_MESSAGE_HISTORY'];
+  }
 }
 
 
@@ -776,9 +868,17 @@ discordClient.on('message', (message) => {
     var member = message.guild.members.get(message.author.id);
     if(Object.keys(commands).map(el => el.toLowerCase()).includes(command)){
       var cmd = commands[Object.keys(commands).find(a => a.toLowerCase() === command)]
-      if(member.permissions.has(cmd.permissions)){
-        commandsRun++;
-        cmd.run(message, arg, member);
+
+      if((cmd.users && cmd.users.includes(member.id) && member.permissions.has(cmd.permissions)) || (!cmd.users && member.permissions.has(cmd.permissions))){
+        pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
+        .then((res, err) => {
+          if(res.rows[0].login_channel !== message.channel.id){
+            commandsRun++;
+            cmd.run(message, arg, member);
+          }else{
+            dError(message, "Please login before using other commands.")
+          }
+        })
       }else{
         dError(message, 'You need more permissions to run this command.')
       }
@@ -805,7 +905,7 @@ discordClient.on('guildCreate', (guild) => {
     }
   }
   potentialChannels.sort((a, b) => a.length - b.length);
-  pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3)', [guild.id, 0, potentialChannels[0] || '1'])
+  pgSQLClient.query('INSERT INTO servers VALUES($1, $2, $3, $4)', [guild.id, 0, potentialChannels[0] || '1', '{"threshold": 5}'])
     .then(resd => {
       console.log('[UKB] Data uploaded to servers!');
     })
@@ -830,6 +930,43 @@ discordClient.on('guildMemberAdd', (member) => {
           })
       }
     })
+})
+
+discordClient.on('messageReactionAdd', (reaction, user) => {
+  if(reaction.emoji.name === '\u2B50'){
+    var stars = reaction.message.reactions.get('\u2B50');
+    pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [reaction.message.guild.id])
+      .then(resulting => {
+        var thr = JSON.parse(resulting.rows[0].starboard_config)
+
+        if(reaction.message.author.id === user.id && thr.channel){
+          reaction.remove();
+          reaction.message.channel.send('You can\'t star your own messages!');
+        }else{
+          if(stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel){
+            discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
+              .then(messages => {
+                for(var m of messages){
+                  if(m[1].author.id === discordClient.user.id && m[1].embeds[0].footer.text.split('•')[2] && m[1].embeds[0].footer.text.split('•')[2].trim().replace('ID: ', '') === reaction.message.id){
+                    m[1].delete();
+                  }
+                }
+              })
+            reaction.message.react('\uD83C\uDF1F');
+            var starEmbed = new Discord.RichEmbed();
+            starEmbed.setAuthor(reaction.message.author.username, reaction.message.author.avatarURL);
+            starEmbed.setDescription(reaction.message.content !== '' ? reaction.message.content : reaction.message.embeds[0].description);
+            if(reaction.message.attachments.array()[0]){
+              starEmbed.setImage(reaction.message.attachments.array()[0].proxyURL)
+            }
+            starEmbed.setColor(COLORS.INFORMATION);
+            starEmbed.setFooter(stars.count + " \u2B50 • Updated " + new Date() + " • ID: " + reaction.message.id)
+            discordClient.channels.get(thr.channel).send({embed: starEmbed})
+              .catch(console.error)
+          }
+        }
+      })
+  }
 })
 
 // Process handlers @TODO make less ugly
