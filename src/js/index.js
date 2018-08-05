@@ -725,6 +725,7 @@ var commands = {
   },
   announcement: {
     run(message, arg){
+      console.log(HOOK_ID, HOOK_KEY)
       const hook = new Discord.WebhookClient(HOOK_ID, HOOK_KEY);
       const emb = new Discord.RichEmbed();
       emb.setAuthor(message.guild.name, message.guild.iconURL);
