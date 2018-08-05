@@ -875,7 +875,7 @@ discordClient.on('message', (message) => {
       if((cmd.users && cmd.users.includes(member.id) && member.permissions.has(cmd.permissions)) || (!cmd.users && member.permissions.has(cmd.permissions))){
         pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
         .then((res, err) => {
-          if(res.rows[0].login_channel !== message.channel.id){
+          if(res.rows[0].login_channel !== message.channel.id || command === 'login'){
             commandsRun++;
             cmd.run(message, arg, member);
           }else{
@@ -935,8 +935,9 @@ discordClient.on('guildMemberAdd', (member) => {
                   console.log(new_)
                   member.addRole(verfai, 'KAID: ' + resUSERS.rows[0].kaid);
                   member.removeRole(new_, 'Automatically verified; see KAID above.')
+                  clearInterval(q);
                 }
-              }, 500)
+              }, 100)
 
             }
           })
