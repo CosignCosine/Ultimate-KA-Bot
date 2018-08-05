@@ -730,6 +730,8 @@ var commands = {
       const emb = new Discord.RichEmbed();
       emb.setAuthor(message.guild.name, message.guild.iconURL);
       emb.setDescription(arg);
+      emb.setFooter(new Date())
+      emb.setColor('#f4637c');
       hook.send({
         embeds: [emb]
       }).then( l => { console.log('[UKB] Announcement made'); })
@@ -926,7 +928,11 @@ discordClient.on('guildMemberAdd', (member) => {
               pleaseLogin.setFooter('You cannot join if you have a child account (violation of Discord and KA ToS).')
               member.guild.channels.get(res.rows[0].login_channel).send({embed: pleaseLogin});
             }else{
-              member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + resUSERS.rows[0].kaid);
+              var verfai = member.guild.roles.find('name', 'Verified');
+              var new_ = member.guild.roles.find('name', 'New');
+              console.log(verfai)
+              member.addRole(verfai, 'KAID: ' + resUSERS.rows[0].kaid);
+              member.removeRole(new_, 'Automatically verified; see KAID above.')
             }
           })
       }
