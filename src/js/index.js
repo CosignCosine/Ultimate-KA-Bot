@@ -928,11 +928,16 @@ discordClient.on('guildMemberAdd', (member) => {
               pleaseLogin.setFooter('You cannot join if you have a child account (violation of Discord and KA ToS).')
               member.guild.channels.get(res.rows[0].login_channel).send({embed: pleaseLogin});
             }else{
-              var verfai = member.guild.roles.find('name', 'Verified');
-              var new_ = member.guild.roles.find('name', 'New');
-              console.log(verfai)
-              member.addRole(verfai, 'KAID: ' + resUSERS.rows[0].kaid);
-              member.removeRole(new_, 'Automatically verified; see KAID above.')
+              var q = setInterval(function(){
+                var verfai = member.guild.roles.find('name', 'Verified');
+                var new_ = member.guild.roles.find('name', 'New');
+                if(new_){
+                  console.log(new_)
+                  member.addRole(verfai, 'KAID: ' + resUSERS.rows[0].kaid);
+                  member.removeRole(new_, 'Automatically verified; see KAID above.')
+                }
+              }, 500)
+
             }
           })
       }
