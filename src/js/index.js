@@ -830,6 +830,7 @@ webClient.get('/login/', function (req, res) {
                           var member = discordClient.guilds.get(server.id).members.get(id);
                           if(member){
                             member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
+                            member.removeRole(member.guild.roles.find('name', 'New'), 'Automatically verified; see KAID above.')
                           }
                         }
                       }
