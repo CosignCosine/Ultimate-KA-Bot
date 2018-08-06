@@ -988,8 +988,9 @@ discordClient.on('guildMemberAdd', (member) => {
                       }
                       console.log(totalBadges)
 
+                      console.log(response.body)
                       var mastered = response.body.proficient_exercises.length;
-                      console.log(response.body.proficient_exercises)
+
                       if(mastered >= 100){
                         var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
                         console.log(mv);
