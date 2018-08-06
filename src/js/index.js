@@ -988,16 +988,21 @@ discordClient.on('guildMemberAdd', (member) => {
                       }
                       console.log(totalBadges)
 
-                      console.log(response.body)
-                      var mastered = response.body.proficient_exercises.length;
+                      client.auth(resUSERS.rows[0].token, resUSERS.rows[0].secret)
+                        .get('/api/v1/user/exercises', { casing: 'camel' })
+                        .then(exres => {
+                          console.log(exres)
+                          /*
+                          var mastered = response.body.proficient_exercises.length;
 
-                      if(mastered >= 100){
-                        var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
-                        console.log(mv);
-                        member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
-                          .catch(console.log)
-                      }
-                      console.log(mastered)
+                          if(mastered >= 100){
+                            var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
+                            console.log(mv);
+                            member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
+                              .catch(console.log)
+                          }
+                          console.log(mastered)*/
+                        })
                     })
 
                   member.removeRole(new_, 'Automatically verified; see KAID above.')
