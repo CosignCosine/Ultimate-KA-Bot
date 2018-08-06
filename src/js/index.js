@@ -991,7 +991,13 @@ discordClient.on('guildMemberAdd', (member) => {
                       client.auth(resUSERS.rows[0].token, resUSERS.rows[0].secret)
                         .get('/api/v1/user/exercises', { casing: 'camel' })
                         .then(exres => {
-                          console.log(exres)
+                          var masteredExercises = [];
+                          for(var i = 0; i < exres.length; i++){
+                            if(exres[i].proficientDate !== null){
+                              masteredExercises.push(exres[i])
+                            }
+                          }
+                          console.log(masteredExercises.length);
                           /*
                           var mastered = response.body.proficient_exercises.length;
 
@@ -1002,6 +1008,9 @@ discordClient.on('guildMemberAdd', (member) => {
                               .catch(console.log)
                           }
                           console.log(mastered)*/
+                        })
+                        .catch(e => {
+                          console.error(e)
                         })
                     })
 
