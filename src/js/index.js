@@ -968,7 +968,6 @@ discordClient.on('guildMemberAdd', (member) => {
                 var verfai = member.guild.roles.find('name', 'Verified');
                 var new_ = member.guild.roles.find('name', 'New');
                 if(new_){
-                  console.log(new_)
                   member.addRole(verfai, 'KAID: ' + resUSERS.rows[0].kaid);
                   client.auth(resUSERS.rows[0].token, resUSERS.rows[0].secret)
                     .get("/api/v1/user", { casing: "camel" })
@@ -977,7 +976,9 @@ discordClient.on('guildMemberAdd', (member) => {
                       var pv = (+response.body.points >= 1000000 ? (+response.body.points >= 5000000 ? (+response.body.points >= 10000000 ? '10,000,000' : '5,000,000') : '1,000,000') : null) + '+ EPs';
                       console.log(pv)
                       member.addRole(member.guild.roles.find('name', pv), 'Has ' + response.body.points + 'energy points.')
-                      var totalBadges = Array.prototype.reduce.call(response.body.badgeCounts, (acc, currVal) => acc + currVal);
+                      var totalBadges = +response.body.badgeCounts['0'] + +response.body.badgeCounts['1'] + +response.body.badgeCounts['2'] + +response.body.badgeCounts['3'] + +response.body.badgeCounts['4'] + +response.body.badgeCounts['5'];
+
+                      console.log(response.body)
                       console.log(totalBadges)
                     })
 
