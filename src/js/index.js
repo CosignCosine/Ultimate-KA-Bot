@@ -975,6 +975,8 @@ discordClient.on('guildMemberAdd', (member) => {
                     .then(response => {
                       if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
                       var pv = (+response.body.points >= 1000000 ? (+response.body.points >= 5000000 ? (+response.body.points >= 10000000 ? '10,000,000' : '5,000,000') : '1,000,000') : null) + '+ EPs';
+                      var totalBadges = response.body.badgeCounts.reduce((acc, currVal) => acc + currVal);
+                      console.log(totalBadges)
                       console.log(pv)
                       member.addRole(member.guild.roles.find('name', pv), 'Has ' + response.body.points + 'energy points.')
                     })
