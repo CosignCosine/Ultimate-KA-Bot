@@ -979,16 +979,23 @@ discordClient.on('guildMemberAdd', (member) => {
                         .catch(console.log)
 
                       var totalBadges = +response.body.badgeCounts['0'] + +response.body.badgeCounts['1'] + +response.body.badgeCounts['2'] + +response.body.badgeCounts['3'] + +response.body.badgeCounts['4'] + +response.body.badgeCounts['5'];
-                      var tv = (totalBadges >= 1000 ? (totalBadges >= 5000 ? (totalBadges >= 10000 ? '10' : '5') : '1') : null) + ',000+ Badges';
-                      console.log(tv)
-                      member.addRole(member.guild.roles.find('name', tv), 'Has ' + totalBadges + ' badges.')
-                        .catch(console.log)
 
-                      var mastered = response.body.proficient_exercises.length
-                      var mv = (mastered >= 100 ? (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') : null) + '+ Skills';
-                      console.log(mv);
-                      member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
-                        .catch(console.log)
+                      if(totalBadges >= 1000){
+                        var tv = (totalBadges >= 5000 ? (totalBadges >= 10000 ? '10' : '5') : '1') + ',000+ Badges';
+                        console.log(tv)
+                        member.addRole(member.guild.roles.find('name', tv), 'Has ' + totalBadges + ' badges.')
+                          .catch(console.log)
+                      }
+                      console.log(totalBadges)
+
+                      var mastered = response.body.proficient_exercises.length;
+                      if(mastered >= 100){
+                        var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
+                        console.log(mv);
+                        member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
+                          .catch(console.log)
+                      }
+                      console.log(mastered)
                     })
 
                   member.removeRole(new_, 'Automatically verified; see KAID above.')
