@@ -345,7 +345,7 @@ var commands = {
       }
     },
     documentation: 'exploit this i dare you hahahahahahAHAHAHAHAHAHAHAHA',
-    users: ['198942810571931649']
+    users: [PING_USER]
   },
   badge: {
     run(message, arg){
@@ -904,7 +904,7 @@ discordClient.on('message', (message) => {
       if((cmd.users && cmd.users.includes(member.id) && member.permissions.has(cmd.permissions)) || (!cmd.users && member.permissions.has(cmd.permissions))){
         pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
         .then((res, err) => {
-          if(res.rows[0].login_channel !== message.channel.id || command === 'login'){
+          if(res.rows[0].login_channel !== message.channel.id || command === 'login' || message.author.id === PING_USER){
             commandsRun++;
             cmd.run(message, arg, member);
           }else{
