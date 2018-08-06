@@ -857,7 +857,7 @@ webClient.get('/login/', function (req, res) {
                         if(server.login_mandatory && discordClient.guilds.get(server.id)){
                           var member = discordClient.guilds.get(server.id).members.get(id);
                           if(member){
-                            var pv = +response.body.points >= 1000000 ? (+response.body.points >= 5000000 ? (+response.body.points >= 10000000 ? '10M' : '5M') : '1M') : null;
+                            var pv = +response.body.points >= 1000000 ? (+response.body.points >= 5000000 ? (+response.body.points >= 10000000 ? '10,000,000' : '5,000,000') : '1,000,000') : null;
                             member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
                             member.addRole(member.guild.roles.find('name', pv + '+ EPs'), 'Has ' + response.body.points + 'energy points.')
                             member.removeRole(member.guild.roles.find('name', 'New'), 'Automatically verified; see KAID above.')
