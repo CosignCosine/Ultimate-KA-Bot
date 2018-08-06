@@ -993,6 +993,7 @@ discordClient.on('guildMemberAdd', (member) => {
                         .then(exres => {
                           var masteredExercises = [];
                           for(var i = 0; i < exres.length; i++){
+                            console.log(exres[i]);
                             if(exres[i].proficientDate !== null){
                               masteredExercises.push(exres[i])
                             }
