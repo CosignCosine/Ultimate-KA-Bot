@@ -961,9 +961,11 @@ discordClient.on('ready', () => {
   }
 });
 discordClient.on('message', (message) => {
+  if(message.guild === null) return;
+
   pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
   .then((res, err) => {
-    if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login'){
+    if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login' && message.author.id !== discordClient.user.id){
       message.delete();
     }
   })
@@ -1123,6 +1125,8 @@ discordClient.on('guildMemberAdd', (member) => {
 })
 
 discordClient.on('messageReactionAdd', (reaction, user) => {
+  if(reaction.message.guild === null) return;
+
   if(reaction.emoji.name === '\u2B50'){
     var stars = reaction.message.reactions.get('\u2B50');
     pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [reaction.message.guild.id])
