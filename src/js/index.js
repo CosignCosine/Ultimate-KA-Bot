@@ -994,8 +994,7 @@ discordClient.on('guildMemberAdd', (member) => {
                           var exercises = exres.body;
                           var masteredExercises = [];
                           for(var i = 0; i < exercises.length; i++){
-                            console.log(exercises[i]);
-                            if(exercises[i].proficientDate !== null){
+                            if(exercises[i].fpmMasteryLevel === 'mastered'){
                               masteredExercises.push(exercises[i])
                             }
                           }
