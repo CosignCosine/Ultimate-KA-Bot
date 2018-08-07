@@ -1130,7 +1130,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
         var thr = JSON.parse(resulting.rows[0].starboard_config)
 
         if(reaction.message.author.id === user.id && thr.channel){
-          reaction.remove(user);
+          reaction.remove(user)
             .catch(console.log)
           user.send('You can\'t star your own messages!')
             .catch(e => {
