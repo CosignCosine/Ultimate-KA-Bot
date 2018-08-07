@@ -991,11 +991,12 @@ discordClient.on('guildMemberAdd', (member) => {
                       client.auth(resUSERS.rows[0].token, resUSERS.rows[0].secret)
                         .get('/api/v1/user/exercises', { casing: 'camel' })
                         .then(exres => {
+                          var exercises = exres.body;
                           var masteredExercises = [];
-                          for(var i = 0; i < exres.length; i++){
-                            console.log(exres[i]);
-                            if(exres[i].proficientDate !== null){
-                              masteredExercises.push(exres[i])
+                          for(var i = 0; i < exercises.length; i++){
+                            console.log(exercises[i]);
+                            if(exercises[i].proficientDate !== null){
+                              masteredExercises.push(exercises[i])
                             }
                           }
                           console.log(masteredExercises.length);
