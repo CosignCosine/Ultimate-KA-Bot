@@ -1012,7 +1012,10 @@ discordClient.on('guildMemberAdd', (member) => {
                             .get('/api/internal/user/streak', {casing: 'camel'})
                             .then(stres => {
                               var streakData = stres.body;
-                              console.log(streakData)
+                              streakData.history.sort((a, b) => {
+                                return (new Date(a[0]) - new Date(a[1])) - (new Date(b[0]) - new Date(b[1]))
+                              })
+                              console.log(streakData.history)
                             })
                         })
                         .catch(e => {
