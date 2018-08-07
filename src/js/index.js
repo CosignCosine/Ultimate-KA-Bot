@@ -1007,6 +1007,13 @@ discordClient.on('guildMemberAdd', (member) => {
                               .catch(console.log)
                           }
                           console.log(mastered)
+
+                          client.auth(resUSERS.rows[0].token, resUSERS.rows[0].secret)
+                            .get('/api/internal/user/streak', {casing: 'camel'})
+                            .then(stres => {
+                              var streakData = stres.body;
+                              console.log(streakData)
+                            })
                         })
                         .catch(e => {
                           console.error(e)
