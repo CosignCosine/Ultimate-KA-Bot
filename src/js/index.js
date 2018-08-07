@@ -1016,6 +1016,19 @@ discordClient.on('guildMemberAdd', (member) => {
                                 return (new Date(a[0]) - new Date(a[1])) - (new Date(b[0]) - new Date(b[1]))
                               })
                               console.log(streakData.history)
+                              if(!streakData.history[0]){
+
+                              }else{
+                                var longestStreak = Math.abs(streakData.history[0][0] - streakData.history[0][1]);
+                                console.log(longestStreak);
+
+                                longestStreak /= 1000; // ms
+                                longestStreak /= 60; // seconds
+                                longestStreak /= 60; // minutes
+                                longestStreak /= 24; // hours
+
+                                console.log(Math.round(longestStreak));
+                              }
                             })
                         })
                         .catch(e => {
