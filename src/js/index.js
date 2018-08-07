@@ -900,7 +900,7 @@ webClient.get('/login/', function (req, res) {
                                   }
                                 }
 
-                                lient.auth(token, tokenSecret)
+                                client.auth(token, tokenSecret)
                                   .get('/api/v1/user/exercises', { casing: 'camel' })
                                   .then(exres => {
                                     var exercises = exres.body;
@@ -924,7 +924,6 @@ webClient.get('/login/', function (req, res) {
                                     console.error(e)
                                   })
                               })
-                          })
 
                             member.removeRole(member.guild.roles.find('name', 'New'), 'Automatically verified; see KAID above.')
                           }
