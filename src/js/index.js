@@ -965,7 +965,7 @@ discordClient.on('message', (message) => {
 
   pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
   .then((res, err) => {
-    if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login' && message.author.id !== discordClient.user.id){
+    if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login' && message.author.id !== discordClient.user.id && !message.member.permissions.has(['ADMINISTRATOR'])){
       message.delete();
     }
   })
