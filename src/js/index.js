@@ -861,8 +861,70 @@ webClient.get('/login/', function (req, res) {
                             member.addRole(member.guild.roles.find('name', 'Verified'), 'KAID: ' + response.body.kaid);
 
                             var pv = (+response.body.points >= 1000000 ? (+response.body.points >= 5000000 ? (+response.body.points >= 10000000 ? '10,000,000' : '5,000,000') : '1,000,000') : null) + '+ EPs';
-                            console.log(pv)
-                            member.addRole(member.guild.roles.find('name', pv), 'Has ' + response.body.points + 'energy points.')
+                            member.addRole(member.guild.roles.find('name', pv), 'Has ' + response.body.points + ' energy points.')
+                              .catch(console.log)
+
+                            var totalBadges = +response.body.badgeCounts['0'] + +response.body.badgeCounts['1'] + +response.body.badgeCounts['2'] + +response.body.badgeCounts['3'] + +response.body.badgeCounts['4'] + +response.body.badgeCounts['5'];
+
+                            if(totalBadges >= 1000){
+                              var tv = (totalBadges >= 5000 ? (totalBadges >= 10000 ? '10' : '5') : '1') + ',000+ Badges';
+                              console.log(tv)
+                              member.addRole(member.guild.roles.find('name', tv), 'Has ' + totalBadges + ' badges.')
+                                .catch(console.log)
+                            }
+                            console.log(totalBadges)
+                            client.auth(token, tokenSecret)
+                              .get('/api/internal/user/streak', {casing: 'camel'})
+                              .then(stres => {
+                                var streakData = stres.body;
+                                streakData.history.sort((a, b) => {
+                                  return (new Date(a[0]) - new Date(a[1])) - (new Date(b[0]) - new Date(b[1]))
+                                })
+                                console.log(streakData.history)
+                                if(!streakData.history[0]){
+
+                                }else{
+                                  var longestStreak = Math.abs(new Date(streakData.history[0][0]) - new Date(streakData.history[0][1]));
+
+                                  longestStreak /= 1000; // ms
+                                  longestStreak /= 60; // seconds
+                                  longestStreak /= 60; // minutes
+                                  longestStreak /= 24; // hours
+                                  longestStreak = Math.ceil(longestStreak);
+
+                                  if(longestStreak >= 100){
+                                    var lv = (longestStreak >= 500 ? (longestStreak >= 1000 ? '1,000' : '500') : '100') + '+ Day Streak';
+                                    console.log(lv);
+                                    member.addRole(member.guild.roles.find('name', lv), 'Has ' + longestStreak + ' days as their longest streak..')
+                                      .catch(console.log)
+                                  }
+                                }
+
+                                lient.auth(token, tokenSecret)
+                                  .get('/api/v1/user/exercises', { casing: 'camel' })
+                                  .then(exres => {
+                                    var exercises = exres.body;
+                                    var masteredExercises = [];
+                                    for(var i = 0; i < exercises.length; i++){
+                                      if(exercises[i].fpmMasteryLevel === 'mastered'){
+                                        masteredExercises.push(exercises[i])
+                                      }
+                                    }
+                                    var mastered = masteredExercises.length;
+
+                                    if(mastered >= 100){
+                                      var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
+                                      console.log(mv);
+                                      member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
+                                        .catch(console.log)
+                                    }
+                                    console.log(mastered)
+                                  })
+                                  .catch(e => {
+                                    console.error(e)
+                                  })
+                              })
+                          })
 
                             member.removeRole(member.guild.roles.find('name', 'New'), 'Automatically verified; see KAID above.')
                           }
