@@ -1019,7 +1019,7 @@ discordClient.on('guildMemberAdd', (member) => {
                               if(!streakData.history[0]){
 
                               }else{
-                                var longestStreak = Math.abs(streakData.history[0][0] - streakData.history[0][1]);
+                                var longestStreak = Math.abs(new Date(streakData.history[0][0]) - new Date(streakData.history[0][1]));
                                 console.log(longestStreak);
 
                                 longestStreak /= 1000; // ms
