@@ -1020,14 +1020,20 @@ discordClient.on('guildMemberAdd', (member) => {
 
                               }else{
                                 var longestStreak = Math.abs(new Date(streakData.history[0][0]) - new Date(streakData.history[0][1]));
-                                console.log(longestStreak);
 
                                 longestStreak /= 1000; // ms
                                 longestStreak /= 60; // seconds
                                 longestStreak /= 60; // minutes
                                 longestStreak /= 24; // hours
+                                longestStreak = Math.ceil(longestStreak);
 
-                                console.log(Math.round(longestStreak));
+                                if(longestStreak >= 100){
+                                  var lv = (longestStreak >= 500 ? (longestStreak >= 1000 ? '1,000' : '500') : '100') + '+ Day Streak';
+                                  console.log(lv);
+                                  member.addRole(member.guild.roles.find('name', lv), 'Has ' + longestStreak + ' days as their longest streak..')
+                                    .catch(console.log)
+                                }
+
                               }
                             })
                         })
@@ -1036,8 +1042,11 @@ discordClient.on('guildMemberAdd', (member) => {
                         })
                     })
 
-                  member.removeRole(new_, 'Automatically verified; see KAID above.')
-                  clearInterval(q);
+                  if(member.roles.exists('name', 'New')){
+                    console.log('has new person role')
+                    member.removeRole(new_, 'Automatically verified; see KAID above.')
+                    clearInterval(q);
+                  }
                 }
               }, 100)
 
