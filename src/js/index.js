@@ -998,9 +998,7 @@ discordClient.on('guildMemberAdd', (member) => {
                               masteredExercises.push(exercises[i])
                             }
                           }
-                          console.log(masteredExercises.length);
-                          /*
-                          var mastered = response.body.proficient_exercises.length;
+                          var mastered = masteredExercises.length;
 
                           if(mastered >= 100){
                             var mv = (mastered >= 500 ? (mastered >= 1000 ? '1,000' : '500') : '100') + '+ Skills';
@@ -1008,7 +1006,7 @@ discordClient.on('guildMemberAdd', (member) => {
                             member.addRole(member.guild.roles.find('name', mv), 'Has ' + mastered + ' exercises mastered.')
                               .catch(console.log)
                           }
-                          console.log(mastered)*/
+                          console.log(mastered)
                         })
                         .catch(e => {
                           console.error(e)
