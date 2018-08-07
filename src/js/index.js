@@ -961,6 +961,13 @@ discordClient.on('ready', () => {
   }
 });
 discordClient.on('message', (message) => {
+  pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
+  .then((res, err) => {
+    if(res.rows[0].login_channel !== message.channel.id && message.content !== 'ka!login'){
+      message.delete();
+    }
+  })
+
   if(message.content.toLowerCase().startsWith(PREFIX.toLowerCase())){
     var command = message.content.toLowerCase().replace(PREFIX.toLowerCase(), '').split(' ')[0];
     var arg = message.content.substr(command.length + PREFIX.length + 1, message.content.length-1)
@@ -1123,8 +1130,12 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
         var thr = JSON.parse(resulting.rows[0].starboard_config)
 
         if(reaction.message.author.id === user.id && thr.channel){
-          reaction.remove();
-          reaction.message.channel.send('You can\'t star your own messages!');
+          reaction.remove(user);
+            .catch(console.log)
+          user.send('You can\'t star your own messages!')
+            .catch(e => {
+              reaction.message.channel.send('You can\'t star your own messages!');
+            })
         }else{
           if(stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel){
             discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
