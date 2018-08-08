@@ -300,7 +300,7 @@ var commands = {
             }else{
               console.log(dbKAUser)
               client.auth(dbKAUser.token, dbKAUser.secret)
-                .get('/api/v1/user/', {casing: 'camel'})
+                .get('/api/v1/user', {casing: 'camel'})
                 .then(response => {
                   console.log(response.body)
                   var ee = new Discord.RichEmbed();
