@@ -299,19 +299,21 @@ var commands = {
               dError(message, 'Their account is private!');
             }else{
               console.log(dbKAUser)
-              client.auth(dbKAUser.token, dbKAUser.secret)
-                .get('/api/v1/user', {casing: 'camel'})
-                .then(response => {
-                  console.log(response.body)
-                  var ee = new Discord.RichEmbed();
-                  ee.setAuthor(discordUser.username, discordUser.avatarURL)
-                  ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})`);
-                  ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
-                  ee.setColor(COLORS.COMPLETE);
-                  message.channel.send({embed: ee})
+              request('https://www.khanacademy.org/api/internal/user/profile?kaid=' + dbKAUser.kaid, (err, res, body) => {
+                if(err){
+                  dError(message, 'Khan Academy\'s API seems to be down.')
+                }
+                body = body instanceof Object ? body : JSON.parse(body);
+                console.log(body)
+                var ee = new Discord.RichEmbed();
+                ee.setAuthor(discordUser.username, discordUser.avatarURL)
+                ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})`);
+                ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
+                ee.setColor(COLORS.COMPLETE);
+                message.channel.send({embed: ee})
 
-                  // if changed, put info in database
-                })
+                // if changed, put info in database
+              })
             }
           })
           .catch((e) => {
