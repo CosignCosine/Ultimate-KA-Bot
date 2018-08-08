@@ -312,7 +312,15 @@ var commands = {
                 ee.setColor(COLORS.COMPLETE);
                 message.channel.send({embed: ee})
 
-                // if changed, put info in database
+                var thingsToCheckAgainst = ['kaid', 'username', 'nickname'];
+                for(var thing of thingsToCheckAgainst){
+                  if(dbKAUser[thing] !== body[thing]){
+                    pgSQLClient.query('UPDATE users SET ' + thing + '=$1 WHERE id=$2', [body[thing], discordUser.id])
+                      .then(res => {
+                        console.log(res.rows)
+                      })
+                  }
+                }
               })
             }
           })
