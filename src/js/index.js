@@ -532,7 +532,7 @@ var commands = {
           if(!!+uname.dbKAUser.private){
             _private = true;
           }
-          uname = uname.dbKAUser.username;
+          uname = uname.dbKAUser.kaid;
         }
       }else{
         uname = arg.split(' ')[0].replace(/@/gim, '');
@@ -545,7 +545,7 @@ var commands = {
         dError(message, 'User could not be found in guild.');
         return;
       }
-      request('https://www.khanacademy.org/api/internal/user/profile?username=' + uname, (err, res, body) => {
+      request('https://www.khanacademy.org/api/internal/user/profile?kaid=' + uname, (err, res, body) => {
         if(err){
           dError(message, 'Khan Academy\'s API seems to be down.')
         }
@@ -555,7 +555,7 @@ var commands = {
           dError(message, 'This user could not be found or is child-accounted.')
         }else{
           var db = new Discord.RichEmbed();
-          db.setAuthor(body.nickname + " (@" + body.username + ")", body.avatar.imagePath.replace(/\/images\/avatars\/(?:svg\/)?(.*?)\.(?:svg|png)/ig, (match, g) => `https://www.kasandbox.org/programming-images/avatars/${g}.png`));
+          db.setAuthor(body.nickname + " (@" + (body.username !== '' ? body.username : body.kaid) + ")", body.avatar.imagePath.replace(/\/images\/avatars\/(?:svg\/)?(.*?)\.(?:svg|png)/ig, (match, g) => `https://www.kasandbox.org/programming-images/avatars/${g}.png`));
           db.setDescription(body.bio.length > 0 ? body.bio : '\u200b')
           db.setImage(body.backgroundSrc)
           db.addField('Energy Points', body.points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")) // https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
@@ -567,7 +567,7 @@ var commands = {
         }
       })
     },
-    documentation: 'Gets statistics about a user\'s KA account. To use a KA username, add \'@\' before the username, like such: `' + PREFIX + 'kaStats @username`'
+    documentation: 'Gets statistics about a user\'s KA account. To use a KA username, add \'@\' before the username, like such: `' + PREFIX + 'stats @username`'
   },
   generateVerifiedRole: {
     run(message, args){
@@ -691,7 +691,7 @@ var commands = {
     },
     documentation: 'Updates your UKAB Points. A full description can be found in the command itself.'
   },
-  pointsLeaderboard: {
+  leaderboard: {
     run(message, args){
       pgSQLClient.query('SELECT * FROM users;')
         .then(res => {
@@ -708,7 +708,7 @@ var commands = {
             console.log(discordClient.users)
             for(var i = 0; i < data.length; i++){
               if(discordClient.users.get(data[i].id)){
-                var userStr = discordClient.users.get(data[i].id).username + "#" + discordClient.users.get(data[i].id).discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : data[i].username) + ")";
+                var userStr = discordClient.users.get(data[i].id).username + "#" + discordClient.users.get(data[i].id).discriminator + ' (@' + (data[i].private.toString()==='1' ? '[REDACTED]' : (data[i].username !== '' ? data[i].username : data[i].kaid)) + ")";
                 str += '' + (((+args-1)*10) + (+i+1)) + '. ' + userStr + '\n' + data[i].ukab_points + ' points\n\n';
               }
             }
