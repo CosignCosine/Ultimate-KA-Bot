@@ -317,7 +317,7 @@ var commands = {
 
                 var ee = new Discord.RichEmbed();
                 ee.setAuthor(discordUser.username, discordUser.avatarURL)
-                ee.setDescription(`${discordUser.username} is **${dbKAUser.nickname}** *(@${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})*\n\n[Profile Link](https://www.khanacademy.org/profile/${dbKAUser.username !== '' ? dbKAUser.username : dbKAUser.kaid})`);
+                ee.setDescription(`${discordUser.username} is **${body.nickname}** *(@${body.username !== '' ? body.username : body.kaid})*\n\n[Profile Link](https://www.khanacademy.org/profile/${body.username !== '' ? body.username : body.kaid})`);
                 ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
                 ee.setColor(COLORS.COMPLETE);
                 message.channel.send({embed: ee})
