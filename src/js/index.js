@@ -298,6 +298,7 @@ var commands = {
             if(!!+dbKAUser.private){
               dError(message, 'Their account is private!');
             }else{
+              console.log(dbKAUser)
               client.auth(dbKAUser.token, dbKAUser.secret)
                 .get('/api/v1/user/', {casing: 'camel'})
                 .then(response => {
