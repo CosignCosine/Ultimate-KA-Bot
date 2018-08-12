@@ -38,7 +38,7 @@ var version = '0.0.0', // Bot version, defaults to 0.0.0
     discordClient = new Discord.Client(), // New Discord client
     commandsRun = 0, // Total commands run
     markedForReLogin = [], // An array of people who need to re-login to their accounts.
-    { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
+    { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID, SHOOK_KEY, SHOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
 // Fill badge cache
 request("https://www.khanacademy.org/api/v1/badges", function(error, response, body){
@@ -80,6 +80,8 @@ if(DEBUG){
   }
   HOOK_KEY = dbTokens.hook_key;
   HOOK_ID = dbTokens.hook_id;
+  SHOOK_KEY = dbTokens.shook_key;
+  SHOOK_ID = dbTokens.shook_id;
 }
 
 // Readline evaluation
@@ -684,12 +686,16 @@ var commands = {
       message.channel.send({embed: bb})
         .then(m => {
           queryUsers(message.author.id, (err, res) => {
+            console.log('[UKB] Getpoints query success');
             client.auth(res.rows[0].token, res.rows[0].secret)
               .get("/api/v1/user", { casing: "camel" })
               .then(response => {
                 if(typeof response.body !== 'object') response.body = JSON.parse(response.body);
+                console.log('[UKB] Getpoints Khan Academy API success (1/2)')
                 request("https://www.khanacademy.org/api/internal/user/discussion/statistics?kaid=" + res.rows[0].kaid, (err, resp, body) => {
                   if(typeof body !== 'object') body = JSON.parse(body);
+
+                  console.log('[UKB] Getpoints Khan Academy API success (2/2)')
                   var totalPoints = Math.round(response.body.points / 2500) + response.body.badgeCounts['0'] * 5 + response.body.badgeCounts['1'] * 10 + response.body.badgeCounts['2'] * 15 + response.body.badgeCounts['3'] * 50 + response.body.badgeCounts['4'] * 100 + response.body.badgeCounts['5'] * 20 + Math.round(response.body.totalSecondsWatched / 1000) + body.answers * 5 + body.projectanswers * 2;
                   var ee = new Discord.RichEmbed();
                   ee.setAuthor('UKAB Points for ' + message.author.username, message.author.avatarURL);
@@ -744,7 +750,7 @@ var commands = {
   announcement: {
     run(message, arg){
       console.log(HOOK_ID, HOOK_KEY)
-      const hook = new Discord.WebhookClient(HOOK_ID, HOOK_KEY);
+      const hook = new Discord.WebhookClient(!arg.match(/--event/gim) ? HOOK_ID : SHOOK_ID, !arg.match(/--event/gim) ? HOOK_KEY : SHOOK_KEY);
       const emb = new Discord.RichEmbed();
       emb.setAuthor(message.guild.name, message.guild.iconURL);
       emb.setDescription(arg);
