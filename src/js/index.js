@@ -709,7 +709,8 @@ var commands = {
                       console.log('[UKB] Data uploaded!');
                     })
                 })
-              });
+              })
+              .catch(console.error);
           });
         })
     },
