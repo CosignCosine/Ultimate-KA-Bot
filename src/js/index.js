@@ -447,7 +447,7 @@ var commands = {
   },
   overrideStars: {
     run(message, args){
-      overrideStars.push(message.id);
+      overrideStars.push(args);
       message.channel.send('ok done')
         .then(m => {
           m.delete(5000);
@@ -1178,7 +1178,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
               reaction.message.channel.send('You can\'t star your own messages!');
             })
         }else{
-          console.log(overrideStars.includes(reaction.message.id));
+          console.log(overrideStars, overrideStars.includes(reaction.message.id));
           if((stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel) || overrideStars.includes(reaction.message.id)){
             discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
               .then(messages => {
