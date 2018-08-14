@@ -1170,7 +1170,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
       .then(resulting => {
         var thr = JSON.parse(resulting.rows[0].starboard_config)
 
-        if(reaction.message.author.id === user.id && thr.channel && !overrideStars.includes(reaction.message.id)){
+        if((reaction.message.author.id === user.id && !overrideStars.includes(reaction.message.id)) && thr.channel){
           reaction.remove(user)
             .catch(console.log)
           user.send('You can\'t star your own messages!')
@@ -1178,6 +1178,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
               reaction.message.channel.send('You can\'t star your own messages!');
             })
         }else{
+          console.log(overrideStars.includes(reaction.message.id));
           if((stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel) || overrideStars.includes(reaction.message.id)){
             discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
               .then(messages => {
