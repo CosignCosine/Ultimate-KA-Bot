@@ -1193,6 +1193,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
             starEmbed.setAuthor(reaction.message.author.username, reaction.message.author.avatarURL);
             starEmbed.setDescription(reaction.message.content !== '' ? reaction.message.content : (reaction.message.embeds[0].description || '\u200b'));
             if(reaction.message.attachments.array()[0] || (reaction.message.embeds[0] && (reaction.message.embeds[0].thumbnail || reaction.message.embeds[0].image))){
+              console.log(eaction.message.embeds[0].image)
               starEmbed.setImage(reaction.message.attachments.array()[0] ? reaction.message.attachments.array()[0].proxyURL : (reaction.message.embeds[0].thumbnail || reaction.message.embeds[0].image))
             }
             starEmbed.setColor(COLORS.INFORMATION);
