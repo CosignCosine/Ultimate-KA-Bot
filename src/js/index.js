@@ -1177,7 +1177,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
             reaction.message.react('\uD83C\uDF1F');
             var starEmbed = new Discord.RichEmbed();
             starEmbed.setAuthor(reaction.message.author.username, reaction.message.author.avatarURL);
-            starEmbed.setDescription(reaction.message.content !== '' ? reaction.message.content : (reaction.message.embeds[0].description || '\u200b')]);
+            starEmbed.setDescription(reaction.message.content !== '' ? reaction.message.content : (reaction.message.embeds[0].description || '\u200b'));
             if(reaction.message.attachments.array()[0] || (reaction.message.embeds[0] && (reaction.message.embeds[0].thumbnail || reaction.message.embeds[0].image))){
               starEmbed.setImage(reaction.message.attachments.array()[0].proxyURL || (reaction.message.embeds[0].thumbnail || reaction.message.embeds[0].image))
             }
