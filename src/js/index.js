@@ -38,6 +38,7 @@ var version = '0.0.0', // Bot version, defaults to 0.0.0
     discordClient = new Discord.Client(), // New Discord client
     commandsRun = 0, // Total commands run
     markedForReLogin = [], // An array of people who need to re-login to their accounts.
+    overrideStars = [],
     { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID, SHOOK_KEY, SHOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
 // Fill badge cache
@@ -443,6 +444,17 @@ var commands = {
     },
     documentation: "Sets login channel. You can ping the channel or input an id. In the future, you may be able to type the name of the channel.", // @TODO in the future do that <----
     permissions: ["MANAGE_GUILD", "MANAGE_CHANNELS"]
+  },
+  overrideStars: {
+    run(message, args){
+      overrideStars.push(message.id);
+      message.channel.send('ok done')
+        .then(m => {
+          m.delete(5000);
+        })
+    },
+    documentation: "no",
+    permissions: ["MANAGE_MESSAGES"]
   },
   setLoginMandatory: {
     run(message, args){
@@ -1158,7 +1170,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
       .then(resulting => {
         var thr = JSON.parse(resulting.rows[0].starboard_config)
 
-        if(reaction.message.author.id === user.id && thr.channel){
+        if(reaction.message.author.id === user.id && thr.channel && !overrideStars.includes(message.id)){
           reaction.remove(user)
             .catch(console.log)
           user.send('You can\'t star your own messages!')
@@ -1166,7 +1178,7 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
               reaction.message.channel.send('You can\'t star your own messages!');
             })
         }else{
-          if(stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel){
+          if((stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel) || overrideStars.includes(message.id)){
             discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
               .then(messages => {
                 for(var m of messages){
