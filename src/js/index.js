@@ -1192,8 +1192,8 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
             var starEmbed = new Discord.RichEmbed();
             starEmbed.setAuthor(reaction.message.author.username, reaction.message.author.avatarURL);
             starEmbed.setDescription(reaction.message.content !== '' ? reaction.message.content : (reaction.message.embeds[0].description || '\u200b'));
-            if(reaction.message.attachments.array()[0] || (reaction.message.embeds[0] && (reaction.message.embeds[0].thumbnail || reaction.message.embeds[0].image))){
-              starEmbed.setImage(reaction.message.attachments.array()[0] ? reaction.message.attachments.array()[0].proxyURL : (reaction.message.embeds[0].thumbnail.url || reaction.message.embeds[0].image.url))
+            if(reaction.message.attachments.array()[0] || (reaction.message.embeds[0] && (reaction.message.embeds[0].thumbnail !== null || reaction.message.embeds[0].image !== null))){
+              starEmbed.setImage(reaction.message.attachments.array()[0] ? reaction.message.attachments.array()[0].proxyURL : (reaction.message.embeds[0].thumbnail !== null ? reaction.message.embeds[0].thumbnail.url : reaction.message.embeds[0].image.url))
             }
             starEmbed.setColor(COLORS.INFORMATION);
             starEmbed.setFooter(stars.count + " \u2B50 • Updated " + new Date() + " • ID: " + reaction.message.id)
