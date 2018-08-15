@@ -1,16 +1,17 @@
-const DEBUG = false,
-      PREFIX = DEBUG ? '_ka!' : 'ka!',
-      COLORS = {
+// A set of constants required for the bot to run. A brief explanation of each follows to the right.
+const DEBUG = false, // Debug mode is required for some sommands and featured. If you would like to turn debug mode on, change "false" to "true".
+      PREFIX = DEBUG ? '_ka!' : 'ka!', // The prefix here is specified based on debug mode, but it can also be specified globally.
+      COLORS = { // This defines the colors the bot uses. @TODO "Complete" needs to be used more often.
         INFORMATION: '#ff9595',
         COMPLETE: '#b44949',
         ERROR: '#FF0000'
       },
-      RELOAD_CHANNEL = '460219376654876673',
-      PING_USER = '198942810571931649', // Scott
-      CALLBACK_URL = ['http://ukb.herokuapp.com/login/', 'http://localhost/login/'][DEBUG&1],
-      KA = 'www.khanacademy.org',
-      PORT = process.env.PORT || 80,
-      FUN_WORDS = {
+      RELOAD_CHANNEL = '460219376654876673', // Upon bot reload/error, a message is sent to this channel.
+      PING_USER = '198942810571931649', // This user is pinged when the bot has an error.
+      CALLBACK_URL = ['http://ukb.herokuapp.com/login/', 'http://localhost/login/'][DEBUG&1], // This website is used to log users in. It is currently specified by debug, but it can be set by string.
+      KA = 'www.khanacademy.org', // Khan Academy's address.
+      PORT = process.env.PORT || 80, // The website is hosted off of this port, which is set by an environment variable when the bot is run.
+      FUN_WORDS = { // These phrases are an easter egg that are used when the bot is pinged.
         'this is so sad': 'alexa play despacito',
         'can we get 50 likes': 'no',
         'tucker is better': 'die lol',
@@ -41,7 +42,7 @@ var version = '0.0.0', // Bot version, defaults to 0.0.0
     overrideStars = [],
     { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID, SHOOK_KEY, SHOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
-// Fill badge cache
+// Fill badge cache with Khan Academy's default exposed badges to prevent long load times
 request("https://www.khanacademy.org/api/v1/badges", function(error, response, body){
   if (!error && response && response.statusCode === 200) {
     var badges = JSON.parse(body);
@@ -59,13 +60,13 @@ request("https://www.khanacademy.org/api/v1/badges", function(error, response, b
   }
 })
 
-// Get version
+// Get current bot version
 fs.readFile(__dirname + '/../../package.json', 'utf-8', (err, response) => {
   var data = JSON.parse(response);
   version = data.version;
 })
 
-// Use debug parameters
+// Use debug parameters if debug is enabled
 if(DEBUG){
   var dbTokens = JSON.parse(fs.readFileSync(__dirname + '/secret.json'));
   TOKEN = dbTokens.token;
@@ -85,7 +86,7 @@ if(DEBUG){
   SHOOK_ID = dbTokens.shook_id;
 }
 
-// Readline evaluation
+// Readline instant evaluation
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -192,7 +193,7 @@ var confirmation = (message, channel) => { // Message received, data will be sen
       })
     }
 
-// PostgreSQL client login
+// PostgreSQL client login. If DEBUG is being used, then secret.json must be configured.
 const pgSQLClient = new Client(DEBUG ? {
   user: DB.USER,
   host: DB.HOST,
@@ -206,39 +207,52 @@ pgSQLClient.connect()
     console.log('[UKB] PostgreSQLdb connection acquired.')
   })
   .catch((e)=>{
-    console.log('[UKB] Error:' + e.stack);
+    console.log('[UKB] pgSQL Error:' + e.stack);
   })
 
-// Commands
+// All bot commands
 var commands = {
   login: {
     run(message, arg){
+
+      // It's probably not a good idea to redirect users to localhost when they aren't running the website.
       if(DEBUG){
         dError(message, 'Sorry, this command is only available in non-debug mode. Please use the official bot or reload the bot with `DEBUG` set to `false`.');
         return;
       }
+
+      // Find the user in the pgSQL database.
       queryUsers(message.author.id, (err, res) => {
         if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
-          var acceptEmbed = new Discord.RichEmbed();
-          acceptEmbed.setTitle('KA Login');
-          acceptEmbed.setDescription('Instructions have been sent to your direct messages.');
-          acceptEmbed.setFooter('Please make sure to have direct messages for this server enabled, or you will not get the login URL. Additionally, keep in mind that by logging in, you agree to Khan Academy\'s Terms of Service.')
-          acceptEmbed.setColor(COLORS.INFORMATION);
-          message.channel.send({embed: acceptEmbed})
+
+          // Send embed to channel containing login details
+          message.channel.send({embed: new Discord.RichEmbed({
+            title: "KA Login",
+            description: "Instructions have been sent to your direct messages.",
+            footer: "Please make sure to have direct messages for this server enabled, or you will not get the login URL. Additionally, keep in mind that by logging in, you agree to Khan Academy\'s Terms of Service.",
+            color: COLORS.INFORMATION
+          })})
+
+          // Finnicky stuff. I'd suggest not changing this as KA's API doesn't like "close enough"
           client.requestToken()
             .then(response => {
+
+              // Place user in temp cache
               users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
-              var loginEmbed = new Discord.RichEmbed();
-              loginEmbed.setDescription('[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')')
-              loginEmbed.setTitle('Click the link below to connect your KA and Discord accounts.')
-              loginEmbed.setColor(COLORS.COMPLETE)
-              message.author.send({embed: loginEmbed})
+
+              message.author.send({embed: new Discord.RichEmbed({
+                title: 'Click the link below to connect your KA and Discord accounts.',
+                description: '[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')',
+                color: COLORS.COMPLETE
+              })})
                 .catch(e => {
-                  dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?');
+                  console.log('[UKB] Couldn\'t send message to ' + message.author.username + '\'s DM. This is very likely because they haven\'t enabled direct messages for this server.')
+                  dError(message, 'I couldn\'t send a message to your DM! Can you please enable DMs for this server so that I can log you in?\n\nTo enable DMs for this server, right click on the server icon, click "Privacy Settings", and then enable direct messages there.');
                 })
             })
+
         }else{
-          dError(message, 'User already exists!')
+          dError(message, 'It seems that you\'ve already linked your account! If you would like to unlink your account, please contact an administrator.')
         }
       })
     },
@@ -246,15 +260,25 @@ var commands = {
   },
   banned: {
     run(message, arg){
+
+      // Find the user in the pgSQL database
       queryUsers(message.author.id, (err, res) => {
+
+        // If an item does not appear in our records, it does not exist.
         if(err || res.rows.length !== 1){
           dError(message, 'It looks like you haven\'t yet set up a profile with `' + PREFIX + 'login`. Please run that command before trying to get private statistics about your account!');
           return;
         }
+
+        // More finnicky stuff, don't change this
         client.auth(res.rows[0].token, res.rows[0].secret)
           .get("/api/v1/user", { casing: "camel" })
           .then(response => {
+
+            // Tells the user that information has been sent to DMs.
             confirmation(message);
+
+            // Did you get the reference on line 267?
             var ee = new Discord.RichEmbed();
             ee.setTitle('Discussion Ban')
             ee.setDescription(`You have ${response.body.discussionBanned ? '' : 'not '}been discussion banned.`);
