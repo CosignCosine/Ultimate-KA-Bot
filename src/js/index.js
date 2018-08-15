@@ -40,6 +40,7 @@ var version = '0.0.0', // Bot version, defaults to 0.0.0
     commandsRun = 0, // Total commands run
     markedForReLogin = [], // An array of people who need to re-login to their accounts.
     overrideStars = [],
+    noStars = [],
     { TOKEN, SECRET, KEY, DATABASE_URL, HOOK_KEY, HOOK_ID, SHOOK_KEY, SHOOK_ID } = process.env; // token, secret, key, etc, needed for login and set by env vars
 
 // Fill badge cache with Khan Academy's default exposed badges to prevent long load times
@@ -480,6 +481,17 @@ var commands = {
     documentation: "no",
     permissions: ["MANAGE_MESSAGES"]
   },
+  noStars: {
+    run(message, args){
+      noStars.push(args);
+      message.channel.send('ok done')
+        .then(m => {
+          m.delete(5000);
+        })
+    },
+    documentation: "no",
+    permissions: ["MANAGE_MESSAGES"]
+  }
   setLoginMandatory: {
     run(message, args){
       pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
@@ -1188,7 +1200,12 @@ discordClient.on('guildMemberAdd', (member) => {
 discordClient.on('messageReactionAdd', (reaction, user) => {
   if(reaction.message.guild === null) return;
 
-  if(reaction.emoji.name === '\u2B50'){
+  if(reaction.emoji.name === "\u274C" && reaction.message.guild.members.get(user.id).hasPermissions(['MANAGE_MESSAGES'])){
+    noStars.push(reaction.message.id);
+    reaction.message.reactions.deleteAll();
+  }
+
+  if(reaction.emoji.name === '\u2B50' && !noStars.includes(reaction.message.id)){
     var stars = reaction.message.reactions.get('\u2B50');
     pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [reaction.message.guild.id])
       .then(resulting => {
