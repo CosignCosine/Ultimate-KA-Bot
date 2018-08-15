@@ -491,7 +491,7 @@ var commands = {
     },
     documentation: "no",
     permissions: ["MANAGE_MESSAGES"]
-  }
+  },
   setLoginMandatory: {
     run(message, args){
       pgSQLClient.query("SELECT * FROM servers WHERE id=$1", [message.guild.id])
