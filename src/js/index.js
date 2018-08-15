@@ -156,6 +156,31 @@ var confirmation = (message, channel) => { // Message received, data will be sen
     queryUsers = (id, callback) => { // user query
       pgSQLClient.query('SELECT * FROM users WHERE ID = \'' + id + '\';', callback);
     },
+    embed = (config) => {
+      var rret = new Discord.RichEmbed();
+
+      if(config.title){
+        rret.setTitle(config.title)
+      }
+
+      if(config.description){
+        rret.setTitle(config.description)
+      }
+
+      if(config.footer){
+        rret.setFooter(config.footer)
+      }
+
+      if(config.color){
+        rret.setColor(config.color)
+      }
+
+      if(config.fields){
+        // fields, but make this later as it's not required
+      }
+
+      return rret;
+    },
     resolveUsername = (userID, guild) => { // get discord username and ka account data from id and optionally the guild as well
       return new Promise((resolve, reject) => {
         if(!discordClient.readyAt){
@@ -227,7 +252,7 @@ var commands = {
         if(err || res.rows.length !== 1 || markedForReLogin.includes(message.author.id)){
 
           // Send embed to channel containing login details
-          message.channel.send({embed: new Discord.RichEmbed({
+          message.channel.send({embed: embed({
             title: "KA Login",
             description: "Instructions have been sent to your direct messages.",
             footer: "Please make sure to have direct messages for this server enabled, or you will not get the login URL. Additionally, keep in mind that by logging in, you agree to Khan Academy\'s Terms of Service.",
@@ -241,7 +266,7 @@ var commands = {
               // Place user in temp cache
               users[message.author.id] = {request_token: response.token, request_secret: response.tokenSecret};
 
-              message.author.send({embed: new Discord.RichEmbed({
+              message.author.send({embed: embed({
                 title: 'Click the link below to connect your KA and Discord accounts.',
                 description: '[Connect KA Account](https://www.khanacademy.org/api/auth2/authorize?oauth_token=' + response.token + ')',
                 color: COLORS.COMPLETE
