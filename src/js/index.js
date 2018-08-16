@@ -175,6 +175,10 @@ var confirmation = (message, channel) => { // Message received, data will be sen
         rret.setColor(config.color)
       }
 
+      if(config.image){
+        rret.setImage(config.image)
+      }
+
       if(config.fields){
         // fields, but make this later as it's not required
       }
@@ -509,6 +513,7 @@ var commands = {
   noStars: {
     run(message, args){
       noStars.push(args);
+      console.log(noStars)
       message.channel.send('ok done')
         .then(m => {
           m.delete(5000);
@@ -862,6 +867,99 @@ var commands = {
         })
     },
     documentation: 'Does some stuff to messages!!?! o_O'
+  },
+  cat: {
+    run(message, args){
+      request('http://aws.random.cat/meow', (error, response, body) => {
+        if(!(body instanceof Object)) body = JSON.parse(body);
+        message.channel.send({embed: embed({title: 'Random Cat', footer: 'Powered by random.cat', image: body.file, color: COLORS.COMPLETE})})
+      })
+    },
+    documentation: 'A cute kitty appears...'
+  },
+  dog: {
+    run(message, args){
+      request('https://random.dog/woof.json', (error, response, body) => {
+        if(!(body instanceof Object)) body = JSON.parse(body);
+        console.log(body)
+        message.channel.send({embed: embed({title: 'Random Dog', footer: 'Powered by random.dog', image: body.url, color: COLORS.COMPLETE})})
+      })
+    },
+    documentation: 'A cute doggo appears...'
+  },
+  zalgo: {
+    run(message, arg){
+
+      // These zalgo characters are blatantly stolen from http://eeemo.net/. My script is implemented differently than theirs, but the idea is the same.
+      var zalgo_up = [
+				'\u030d', /*     ̍     */		'\u030e', /*     ̎     */		'\u0304', /*     ̄     */		'\u0305', /*     ̅     */
+				'\u033f', /*     ̿     */		'\u0311', /*     ̑     */		'\u0306', /*     ̆     */		'\u0310', /*     ̐     */
+				'\u0352', /*     ͒     */		'\u0357', /*     ͗     */		'\u0351', /*     ͑     */		'\u0307', /*     ̇     */
+				'\u0308', /*     ̈     */		'\u030a', /*     ̊     */		'\u0342', /*     ͂     */		'\u0343', /*     ̓     */
+				'\u0344', /*     ̈́     */		'\u034a', /*     ͊     */		'\u034b', /*     ͋     */		'\u034c', /*     ͌     */
+				'\u0303', /*     ̃     */		'\u0302', /*     ̂     */		'\u030c', /*     ̌     */		'\u0350', /*     ͐     */
+				'\u0300', /*     ̀     */		'\u0301', /*     ́     */		'\u030b', /*     ̋     */		'\u030f', /*     ̏     */
+				'\u0312', /*     ̒     */		'\u0313', /*     ̓     */		'\u0314', /*     ̔     */		'\u033d', /*     ̽     */
+				'\u0309', /*     ̉     */		'\u0363', /*     ͣ     */		'\u0364', /*     ͤ     */		'\u0365', /*     ͥ     */
+				'\u0366', /*     ͦ     */		'\u0367', /*     ͧ     */		'\u0368', /*     ͨ     */		'\u0369', /*     ͩ     */
+				'\u036a', /*     ͪ     */		'\u036b', /*     ͫ     */		'\u036c', /*     ͬ     */		'\u036d', /*     ͭ     */
+				'\u036e', /*     ͮ     */		'\u036f', /*     ͯ     */		'\u033e', /*     ̾     */		'\u035b', /*     ͛     */
+				'\u0346', /*     ͆     */		'\u031a' /*     ̚     */
+			];
+
+			var zalgo_down = [
+				'\u0316', /*     ̖     */		'\u0317', /*     ̗     */		'\u0318', /*     ̘     */		'\u0319', /*     ̙     */
+				'\u031c', /*     ̜     */		'\u031d', /*     ̝     */		'\u031e', /*     ̞     */		'\u031f', /*     ̟     */
+				'\u0320', /*     ̠     */		'\u0324', /*     ̤     */		'\u0325', /*     ̥     */		'\u0326', /*     ̦     */
+				'\u0329', /*     ̩     */		'\u032a', /*     ̪     */		'\u032b', /*     ̫     */		'\u032c', /*     ̬     */
+				'\u032d', /*     ̭     */		'\u032e', /*     ̮     */		'\u032f', /*     ̯     */		'\u0330', /*     ̰     */
+				'\u0331', /*     ̱     */		'\u0332', /*     ̲     */		'\u0333', /*     ̳     */		'\u0339', /*     ̹     */
+				'\u033a', /*     ̺     */		'\u033b', /*     ̻     */		'\u033c', /*     ̼     */		'\u0345', /*     ͅ     */
+				'\u0347', /*     ͇     */		'\u0348', /*     ͈     */		'\u0349', /*     ͉     */		'\u034d', /*     ͍     */
+				'\u034e', /*     ͎     */		'\u0353', /*     ͓     */		'\u0354', /*     ͔     */		'\u0355', /*     ͕     */
+				'\u0356', /*     ͖     */		'\u0359', /*     ͙     */		'\u035a', /*     ͚     */		'\u0323' /*     ̣     */
+			];
+
+			var zalgo_mid = [
+				'\u0315', /*     ̕     */		'\u031b', /*     ̛     */		'\u0340', /*     ̀     */		'\u0341', /*     ́     */
+				'\u0358', /*     ͘     */		'\u0321', /*     ̡     */		'\u0322', /*     ̢     */		'\u0327', /*     ̧     */
+				'\u0328', /*     ̨     */		'\u0334', /*     ̴     */		'\u0335', /*     ̵     */		'\u0336', /*     ̶     */
+				'\u034f', /*     ͏     */		'\u035c', /*     ͜     */		'\u035d', /*     ͝     */		'\u035e', /*     ͞     */
+				'\u035f', /*     ͟     */		'\u0360', /*     ͠     */		'\u0362', /*     ͢     */		'\u0338', /*     ̸     */
+				'\u0337', /*     ̷     */		'\u0361', /*     ͡     */		'\u0489' /*     ҉_     */
+			];
+
+      var chaos = arg.split(''), completeChaos = [];
+      for(var i = 0; i < chaos.length; i++){
+        var chaotic = chaos[i];
+        if(chaotic === ' '){
+          completeChaos.push('  ');
+          continue;
+        }
+
+        var rng = [Math.floor(Math.random()*14), Math.floor(Math.random()*14), Math.floor(Math.random()*14)];
+        for(var j = 0; j < 16; j++){
+          var _xq = [Math.floor(Math.random()*zalgo_up.length), Math.floor(Math.random()*zalgo_down.length), Math.floor(Math.random()*zalgo_mid.length)];
+
+          if(j < rng[0]) chaotic += zalgo_up[_xq[0]];
+
+          if(j < rng[1]) chaotic += zalgo_down[_xq[1]];
+
+          if(j < rng[2]) chaotic += zalgo_mid[_xq[2]];
+
+        }
+
+        completeChaos.push(chaotic)
+        console.log('[UKB] Zalgo iteration ' + i + ' of ' + (chaos.length-1));
+      }
+
+      chaos = completeChaos.join('');
+      message.channel.send(chaos)
+        .catch(e => {
+          dError(message, 'Try a shorter argument.')
+        })
+    },
+    documentation: 'Note: May not work on all operating systems or platforms.'
   }
 }
 commands.help = {
@@ -1225,9 +1323,17 @@ discordClient.on('guildMemberAdd', (member) => {
 discordClient.on('messageReactionAdd', (reaction, user) => {
   if(reaction.message.guild === null) return;
 
-  if(reaction.emoji.name === "\u274C" && reaction.message.guild.members.get(user.id).hasPermissions(['MANAGE_MESSAGES'])){
+  if(reaction.emoji.name === "\u274C" && reaction.message.guild.members.get(user.id).hasPermission('MANAGE_MESSAGES')){
+    for(var react of reaction.message.reactions){
+      console.log(react)
+      if(react[0] !== "\u274C"){
+        for(var user of react[1].users){
+          react[1].remove(user[1]);
+        }
+      }
+    }
     noStars.push(reaction.message.id);
-    reaction.message.reactions.deleteAll();
+    console.log('NEW NOSTARS')
   }
 
   if(reaction.emoji.name === '\u2B50' && !noStars.includes(reaction.message.id)){
@@ -1244,7 +1350,6 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
               reaction.message.channel.send('You can\'t star your own messages!');
             })
         }else{
-          console.log(overrideStars, overrideStars.includes(reaction.message.id));
           if((stars.count >= +thr.threshold && reaction.message.author.id !== discordClient.user.id && thr.channel) || overrideStars.includes(reaction.message.id)){
             discordClient.channels.get(thr.channel).fetchMessages({limit: 50})
               .then(messages => {
@@ -1268,6 +1373,9 @@ discordClient.on('messageReactionAdd', (reaction, user) => {
           }
         }
       })
+  }
+  if(reaction.emoji.name === '\u2B50' && noStars.includes(reaction.message.id)){
+    reaction.remove(user); // tempfix, will change later
   }
 })
 
