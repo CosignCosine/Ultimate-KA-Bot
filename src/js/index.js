@@ -608,6 +608,8 @@ var commands = {
           ee.addField('id', message.guild.id);
           ee.addField('Number of members', message.guild.memberCount);
           ee.addField('Owner', message.guild.owner);
+	  ee.addField('Starboard Channel', res.rows[0].starboard_config.channel);
+	  ee.addField('Starboard Threshold', res.rows[0].starboard_config.threshold);
           ee.addField('Login Channel', res.rows[0].login_channel === '1' ? 'Unset' : '<#' + res.rows[0].login_channel + '>')
           ee.addField('Login Mandatory', ((+res.rows[0].login_mandatory === 0) ? "Not " : "") + "Mandatory")
           ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
