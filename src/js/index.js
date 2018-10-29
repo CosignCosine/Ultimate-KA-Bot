@@ -608,6 +608,8 @@ var commands = {
           ee.addField('id', message.guild.id);
           ee.addField('Number of members', message.guild.memberCount);
           ee.addField('Owner', message.guild.owner);
+	  ee.addField('Starboard Channel', res.rows[0].starboard_config.channel);
+	  ee.addField('Starboard Threshold', res.rows[0].starboard_config.threshold);
           ee.addField('Login Channel', res.rows[0].login_channel === '1' ? 'Unset' : '<#' + res.rows[0].login_channel + '>')
           ee.addField('Login Mandatory', ((+res.rows[0].login_mandatory === 0) ? "Not " : "") + "Mandatory")
           ee.setFooter('Called by ' + message.author.username + '#' + message.author.discriminator)
@@ -1161,9 +1163,10 @@ discordClient.on('message', (message) => {
 
   pgSQLClient.query('SELECT * FROM servers WHERE id=$1', [message.guild.id])
   .then((res, err) => {
-    if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login' && message.author.id !== discordClient.user.id && !message.member.permissions.has(['ADMINISTRATOR'])){
+    // Removed because we'd rather not have to explain deleted messages all the time.	  
+    /*if(res.rows[0].login_channel === message.channel.id && message.content !== 'ka!login' && message.author.id !== discordClient.user.id && !message.member.permissions.has(['ADMINISTRATOR'])){
       message.delete();
-    }
+    }*/
   })
 
   if(message.content.toLowerCase().startsWith(PREFIX.toLowerCase())){
